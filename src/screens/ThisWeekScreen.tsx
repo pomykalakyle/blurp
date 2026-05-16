@@ -130,9 +130,10 @@ export function AddGoalModal({ open, onClose, ltgs, onAdd, onAddLtg }) {
   const [newLtgTitle, setNewLtgTitle] = useState('');
   const [creatingLtg, setCreatingLtg] = useState(false);
   const [notes, setNotes] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
-    if (open) { setTitle(''); setType('achievement'); setLtgId(''); setNewLtgTitle(''); setCreatingLtg(false); setNotes(''); }
+    if (open) { setTitle(''); setType('achievement'); setLtgId(''); setNewLtgTitle(''); setCreatingLtg(false); setNotes(''); setEndDate(''); }
   }, [open]);
 
   const submit = async () => {
@@ -142,7 +143,7 @@ export function AddGoalModal({ open, onClose, ltgs, onAdd, onAddLtg }) {
       const ltg = await onAddLtg(newLtgTitle.trim());
       useLtgId = ltg.id;
     }
-    onAdd({ title: title.trim(), type, longTermGoalId: useLtgId, notes: notes.trim() || null });
+    onAdd({ title: title.trim(), type, longTermGoalId: useLtgId, notes: notes.trim() || null, endDate: endDate || null });
     onClose();
   };
 
@@ -198,6 +199,10 @@ export function AddGoalModal({ open, onClose, ltgs, onAdd, onAddLtg }) {
           <input value={notes} onChange={(e) => setNotes(e.target.value)}
             placeholder="Context, why, how..." className={inputCls} />
         </div>
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-muted mb-2">End date (optional)</label>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
+        </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={submit} disabled={!title.trim()}>Add goal</Button>
@@ -240,11 +245,15 @@ export function EditGoalModal({ open, goal, ltgs, onClose, onSave }) {
   const [title, setTitle] = useState('');
   const [ltgId, setLtgId] = useState('');
   const [notes, setNotes] = useState('');
+  const [endDate, setEndDate] = useState('');
   useEffect(() => {
-    if (open && goal) { setTitle(goal.title); setLtgId(goal.longTermGoalId || ''); setNotes(goal.notes || ''); }
+    if (open && goal) { setTitle(goal.title); setLtgId(goal.longTermGoalId || ''); setNotes(goal.notes || ''); setEndDate(goal.endDate || ''); }
   }, [open, goal]);
   if (!goal) return null;
-  const submit = () => { if (!title.trim()) return; onSave({ title: title.trim(), longTermGoalId: ltgId || null, notes: notes.trim() || null }); };
+  const submit = () => {
+    if (!title.trim()) return;
+    onSave({ title: title.trim(), longTermGoalId: ltgId || null, notes: notes.trim() || null, endDate: endDate || null });
+  };
   const inputCls = "w-full bg-base border border-default rounded-md px-3 py-2 text-cream outline-none focus-border-accent";
   return (
     <Modal open={open} onClose={onClose} title="Edit goal">
@@ -263,6 +272,10 @@ export function EditGoalModal({ open, goal, ltgs, onClose, onSave }) {
         <div>
           <label className="block text-xs uppercase tracking-widest text-muted mb-2">Note</label>
           <input value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-muted mb-2">End date (optional)</label>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

@@ -12,6 +12,7 @@ const goalDoc = v.object({
     slipped: v.optional(v.boolean()),
   }),
   notes: v.union(v.string(), v.null()),
+  endDate: v.optional(v.union(v.string(), v.null())),
   endedAt: v.union(v.number(), v.null()),
 });
 
@@ -29,6 +30,7 @@ export const create = mutation({
     type: v.union(v.literal("achievement"), v.literal("avoidance")),
     longTermGoalId: v.union(v.id("longTermGoals"), v.null()),
     notes: v.union(v.string(), v.null()),
+    endDate: v.union(v.string(), v.null()),
   },
   returns: v.id("goals"),
   handler: async (ctx, args) => {
@@ -37,6 +39,7 @@ export const create = mutation({
       type: args.type,
       longTermGoalId: args.longTermGoalId,
       notes: args.notes,
+      endDate: args.endDate,
       state: args.type === "achievement" ? { done: false } : { slipped: false },
       endedAt: null,
     });
@@ -49,6 +52,7 @@ export const update = mutation({
     title: v.optional(v.string()),
     longTermGoalId: v.optional(v.union(v.id("longTermGoals"), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
+    endDate: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -56,10 +60,12 @@ export const update = mutation({
       title?: string;
       longTermGoalId?: typeof args.longTermGoalId;
       notes?: string | null;
+      endDate?: string | null;
     } = {};
     if (args.title !== undefined) patch.title = args.title;
     if (args.longTermGoalId !== undefined) patch.longTermGoalId = args.longTermGoalId;
     if (args.notes !== undefined) patch.notes = args.notes;
+    if (args.endDate !== undefined) patch.endDate = args.endDate;
     await ctx.db.patch(args.id, patch);
     return null;
   },

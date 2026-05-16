@@ -4,7 +4,7 @@ import { Archive, Check, ChevronDown, ChevronRight, Edit2, Flag, MoreHorizontal,
 import { FONT_DISPLAY, IconButton } from './ui';
 import { isGoalSuccess } from '../lib/core';
 
-export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg }) {
+export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg, renderGoal }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(ltg.title);
@@ -50,10 +50,12 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
       {!collapsed && (
         <div>
           {goals.length === 0 ? (
-            <div className="px-4 py-4 text-xs text-muted italic">No weekly goals under this long-term goal yet.</div>
+            <div className="px-4 py-4 text-xs text-muted italic">No goals under this long-term goal yet.</div>
           ) : (
             goals.map(g => (
-              <GoalRow key={g.id} goal={g} onToggle={() => onToggleGoal(g.id)} onEdit={() => onEditGoal(g)} onDelete={() => onDeleteGoal(g.id)} />
+              renderGoal
+                ? renderGoal(g)
+                : <GoalRow key={g.id} goal={g} onToggle={() => onToggleGoal(g.id)} onEdit={() => onEditGoal(g)} onDelete={() => onDeleteGoal(g.id)} />
             ))
           )}
         </div>
@@ -79,6 +81,11 @@ export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) 
         </div>
         {goal.notes && <div className="text-xs text-muted mt-0.5">{goal.notes}</div>}
       </div>
+      {goal.endDate && (
+        <span className="text-[10px] uppercase tracking-widest text-faint whitespace-nowrap">
+          {new Date(goal.endDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+        </span>
+      )}
       <span className="text-[10px] uppercase tracking-widest text-faint">
         {goal.type === 'avoidance' ? 'avoid' : ''}
       </span>
