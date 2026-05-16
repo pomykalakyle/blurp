@@ -21,6 +21,7 @@ export default defineSchema({
       slipped: v.optional(v.boolean()),
     }),
     notes: v.union(v.string(), v.null()),
+    endDate: v.optional(v.union(v.string(), v.null())),
     endedAt: v.union(v.number(), v.null()),
   })
     .index("by_longTermGoal", ["longTermGoalId"])

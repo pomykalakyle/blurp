@@ -2,10 +2,46 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
+import {
+  DndContext,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { ChevronDown, ChevronRight, Loader2, Plus } from 'lucide-react';
 import { Button, FONT_BODY, FONT_DISPLAY, ThemeStyles, Toast } from './components/ui';
 import { GoalRow, LtgGroup } from './components/goals';
 import { AddGoalModal, AddLtgModal, EditGoalModal } from './screens/ThisWeekScreen';
+
+function DraggableGoal({ goal, onToggle, onEdit, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: goal.id });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
+    touchAction: 'manipulation',
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <GoalRow goal={goal} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
+    </div>
+  );
+}
+
+function DroppableZone({ id, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  const style = isOver
+    ? { outline: '2px solid var(--c-accent)', outlineOffset: '2px', borderRadius: '8px' }
+    : undefined;
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children}
+    </div>
+  );
+}
 
 export default function App() {
   const ltgsRaw = useQuery(api.longTermGoals.list);
@@ -52,6 +88,7 @@ export default function App() {
       longTermGoalId: g.longTermGoalId,
       state: g.state,
       notes: g.notes,
+      endDate: g.endDate ?? null,
     }));
   }, [goalsRaw]);
 
@@ -82,12 +119,14 @@ export default function App() {
     type: g.type,
     longTermGoalId: g.longTermGoalId || null,
     notes: g.notes || null,
+    endDate: g.endDate || null,
   });
   const handleUpdateGoal = (gid, updates) => updateGoalM({
     id: gid,
     title: updates.title,
     longTermGoalId: updates.longTermGoalId,
     notes: updates.notes,
+    endDate: updates.endDate,
   });
   const handleDeleteGoal = (gid) => removeGoalM({ id: gid });
   const handleAddLtg = async (title, description = '') => {
@@ -100,6 +139,17 @@ export default function App() {
     return updateLtgM({ id, ...updates });
   };
   const handleArchiveLtg = (id) => endLtg({ id });
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over) return;
+    const g = goals.find(x => x.id === active.id);
+    if (!g) return;
+    const newLtgId = over.id === 'standalone' ? null : over.id;
+    if (g.longTermGoalId === newLtgId) return;
+    updateGoalM({ id: g.id, longTermGoalId: newLtgId });
+  };
 
   if (loading) {
     return (
@@ -138,30 +188,45 @@ export default function App() {
             </div>
           )}
 
-          {activeLtgs.map(ltg => {
-            const ltgGoals = goalsByLtg.byLtg.get(ltg.id) || [];
-            const isCollapsed = collapsed[ltg.id];
-            return (
-              <LtgGroup key={ltg.id} ltg={ltg} goals={ltgGoals} collapsed={isCollapsed}
-                onToggleCollapse={() => setCollapsed(c => ({ ...c, [ltg.id]: !c[ltg.id] }))}
-                onToggleGoal={handleToggleGoal} onEditGoal={setEditingGoal} onDeleteGoal={handleDeleteGoal}
-                onRenameLtg={(t) => handleUpdateLtg(ltg.id, { title: t })}
-                onArchiveLtg={() => handleArchiveLtg(ltg.id)} />
-            );
-          })}
+          <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
+            {activeLtgs.map(ltg => {
+              const ltgGoals = goalsByLtg.byLtg.get(ltg.id) || [];
+              const isCollapsed = collapsed[ltg.id];
+              return (
+                <DroppableZone key={ltg.id} id={ltg.id}>
+                  <LtgGroup ltg={ltg} goals={ltgGoals} collapsed={isCollapsed}
+                    onToggleCollapse={() => setCollapsed(c => ({ ...c, [ltg.id]: !c[ltg.id] }))}
+                    onToggleGoal={handleToggleGoal} onEditGoal={setEditingGoal} onDeleteGoal={handleDeleteGoal}
+                    onRenameLtg={(t) => handleUpdateLtg(ltg.id, { title: t })}
+                    onArchiveLtg={() => handleArchiveLtg(ltg.id)}
+                    renderGoal={(g) => (
+                      <DraggableGoal key={g.id} goal={g}
+                        onToggle={() => handleToggleGoal(g.id)}
+                        onEdit={() => setEditingGoal(g)}
+                        onDelete={() => handleDeleteGoal(g.id)} />
+                    )} />
+                </DroppableZone>
+              );
+            })}
 
-          {goalsByLtg.standalone.length > 0 && (
-            <div className="border border-soft rounded-lg overflow-hidden">
-              <div className="px-4 py-2 bg-surface-soft border-b border-soft">
-                <span className="text-xs uppercase tracking-widest text-muted">Other goals</span>
-              </div>
-              <div>
-                {goalsByLtg.standalone.map(g => (
-                  <GoalRow key={g.id} goal={g} onToggle={() => handleToggleGoal(g.id)} onEdit={() => setEditingGoal(g)} onDelete={() => handleDeleteGoal(g.id)} />
-                ))}
-              </div>
-            </div>
-          )}
+            {goalsByLtg.standalone.length > 0 && (
+              <DroppableZone id="standalone">
+                <div className="border border-soft rounded-lg overflow-hidden">
+                  <div className="px-4 py-2 bg-surface-soft border-b border-soft">
+                    <span className="text-xs uppercase tracking-widest text-muted">Other goals</span>
+                  </div>
+                  <div>
+                    {goalsByLtg.standalone.map(g => (
+                      <DraggableGoal key={g.id} goal={g}
+                        onToggle={() => handleToggleGoal(g.id)}
+                        onEdit={() => setEditingGoal(g)}
+                        onDelete={() => handleDeleteGoal(g.id)} />
+                    ))}
+                  </div>
+                </div>
+              </DroppableZone>
+            )}
+          </DndContext>
 
           {Object.values(ltgs).some(l => l.status === 'archived') && (
             <div className="pt-4">
