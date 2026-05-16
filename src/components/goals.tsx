@@ -1,13 +1,38 @@
 // @ts-nocheck
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Archive, Check, ChevronDown, ChevronRight, Edit2, Flag, MoreHorizontal, Trash2 } from 'lucide-react';
 import { FONT_DISPLAY, IconButton } from './ui';
 import { isGoalSuccess } from '../lib/core';
+
+function PortalMenu({ open, anchorRef, onClose, children }) {
+  const [pos, setPos] = useState(null);
+  useLayoutEffect(() => {
+    if (open && anchorRef.current) {
+      const r = anchorRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+  }, [open, anchorRef]);
+  if (!open || !pos) return null;
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        className="bg-surface border border-default rounded-md shadow-xl py-1 min-w-[160px]"
+        style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 50 }}
+      >
+        {children}
+      </div>
+    </>,
+    document.body,
+  );
+}
 
 export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg, renderGoal }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(ltg.title);
+  const ltgMenuRef = useRef(null);
   const successCount = goals.filter(isGoalSuccess).length;
 
   return (
@@ -30,21 +55,16 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
           )}
           {goals.length > 0 && <span className="text-xs text-muted ml-2">{successCount}/{goals.length}</span>}
         </button>
-        <div className="relative">
+        <div ref={ltgMenuRef}>
           <IconButton onClick={() => setMenuOpen(v => !v)} title="Group menu"><MoreHorizontal size={16} /></IconButton>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-10 z-20 bg-surface border border-default rounded-md shadow-xl py-1 min-w-[160px]">
-                <button onClick={() => { setRenaming(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
-                  <Edit2 size={14} /> Rename
-                </button>
-                <button onClick={() => { onArchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
-                  <Archive size={14} /> Archive
-                </button>
-              </div>
-            </>
-          )}
+          <PortalMenu open={menuOpen} anchorRef={ltgMenuRef} onClose={() => setMenuOpen(false)}>
+            <button onClick={() => { setRenaming(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+              <Edit2 size={14} /> Rename
+            </button>
+            <button onClick={() => { onArchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+              <Archive size={14} /> Archive
+            </button>
+          </PortalMenu>
         </div>
       </div>
       {!collapsed && (
@@ -66,6 +86,7 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
 
 export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const goalMenuRef = useRef(null);
   const success = isGoalSuccess(goal);
   const struck = goal.type === 'achievement' && goal.state?.done;
 
@@ -90,21 +111,16 @@ export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) 
         {goal.type === 'avoidance' ? 'avoid' : ''}
       </span>
       {!readOnly && (
-        <div className="relative">
+        <div ref={goalMenuRef}>
           <IconButton onClick={() => setMenuOpen(v => !v)} title="Goal menu"><MoreHorizontal size={14} /></IconButton>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-10 z-20 bg-surface border border-default rounded-md shadow-xl py-1 min-w-[140px]">
-                <button onClick={() => { onEdit(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
-                  <Edit2 size={14} /> Edit
-                </button>
-                <button onClick={() => { if (confirm('Delete this goal?')) onDelete(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-danger-strong hover-bg-surface-2 flex items-center gap-2">
-                  <Trash2 size={14} /> Delete
-                </button>
-              </div>
-            </>
-          )}
+          <PortalMenu open={menuOpen} anchorRef={goalMenuRef} onClose={() => setMenuOpen(false)}>
+            <button onClick={() => { onEdit(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+              <Edit2 size={14} /> Edit
+            </button>
+            <button onClick={() => { if (confirm('Delete this goal?')) onDelete(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-danger-strong hover-bg-surface-2 flex items-center gap-2">
+              <Trash2 size={14} /> Delete
+            </button>
+          </PortalMenu>
         </div>
       )}
     </div>
