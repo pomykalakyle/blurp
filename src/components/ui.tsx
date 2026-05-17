@@ -111,6 +111,18 @@ export function ThemeStyles() {
       .fab-shadow { box-shadow: 0 18px 28px -8px rgba(219, 182, 115, 0.25), 0 6px 12px -4px rgba(219, 182, 115, 0.15); }
 
       .toast-bg { background-color: var(--c-text); color: var(--c-bg); }
+
+      .markdown-body p { margin: 0 0 0.75em; }
+      .markdown-body p:last-child { margin-bottom: 0; }
+      .markdown-body ul, .markdown-body ol { margin: 0 0 0.75em; padding-left: 1.4em; }
+      .markdown-body li { margin: 0.2em 0; }
+      .markdown-body strong { color: var(--c-text); font-weight: 600; }
+      .markdown-body em { font-style: italic; }
+      .markdown-body a { color: var(--c-accent); text-decoration: underline; }
+      .markdown-body code { background-color: var(--c-surface-2); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.9em; }
+      .markdown-body pre { background-color: var(--c-surface-2); padding: 0.75em; border-radius: 6px; overflow-x: auto; font-size: 0.85em; margin: 0 0 0.75em; }
+      .markdown-body pre code { background: transparent; padding: 0; }
+      .markdown-body h1, .markdown-body h2, .markdown-body h3 { margin: 0.75em 0 0.4em; font-weight: 600; }
     `}</style>
   );
 }
