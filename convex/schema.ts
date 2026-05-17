@@ -39,4 +39,14 @@ export default defineSchema({
   })
     .index("by_thread_status", ["threadId", "status"])
     .index("by_message", ["messageId"]),
+
+  narrativeEntries: defineTable({
+    title: v.string(),
+    body: v.string(),
+    startDate: v.string(),
+    endDate: v.union(v.string(), v.null()),
+    updatedAt: v.number(),
+  })
+    .index("by_startDate", ["startDate"])
+    .index("by_endDate", ["endDate"]),
 });

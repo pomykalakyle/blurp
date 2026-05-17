@@ -3,6 +3,7 @@ import { FONT_BODY, ThemeStyles } from "./components/ui";
 import { AppShell, Section } from "./components/AppShell";
 import { GoalsScreen } from "./screens/GoalsScreen";
 import { ChatScreen } from "./screens/ChatScreen";
+import { NarrativeScreen } from "./screens/NarrativeScreen";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<Section>("goals");
@@ -31,14 +32,14 @@ export default function App() {
         onSelectThread={(id) => goToChat(id)}
         onNewChat={() => goToChat(null)}
       >
-        {activeSection === "goals" ? (
-          <GoalsScreen />
-        ) : (
+        {activeSection === "goals" && <GoalsScreen />}
+        {activeSection === "chat" && (
           <ChatScreen
             threadId={currentThreadId}
             onThreadCreated={(id) => setCurrentThreadId(id)}
           />
         )}
+        {activeSection === "narrative" && <NarrativeScreen />}
       </AppShell>
     </div>
   );

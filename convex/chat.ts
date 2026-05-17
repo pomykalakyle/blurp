@@ -78,6 +78,10 @@ async function buildDynamicContext(
     internal.chatLookups.listCurrentGoals,
     {},
   );
+  const recentEntries: Doc<"narrativeEntries">[] = await ctx.runQuery(
+    internal.chatLookups.listEntriesInContextWindow,
+    {},
+  );
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -113,6 +117,19 @@ async function buildDynamicContext(
         })
         .join("\n");
 
+  const entryLines = recentEntries.length === 0
+    ? "(none)"
+    : recentEntries
+        .map((e) => {
+          const range = e.endDate === null
+            ? `${e.startDate} → ongoing`
+            : e.startDate === e.endDate
+              ? e.startDate
+              : `${e.startDate} → ${e.endDate}`;
+          return `- [${e._id}] (updatedAt: ${e.updatedAt}) (${range}) ${e.title}\n  ${e.body.replace(/\n/g, "\n  ")}`;
+        })
+        .join("\n");
+
   return `${ABOUT_KYLE_SYSTEM}
 
 <current-state>
@@ -123,6 +140,9 @@ ${ltgLines}
 
 Current weekly goals:
 ${goalLines}
+
+Recent narrative entries (within last 2 weeks or ongoing):
+${entryLines}
 </current-state>`;
 }
 

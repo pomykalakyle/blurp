@@ -40,6 +40,22 @@ export const proposalValidator = v.union(
       v.object({ slipped: v.boolean() }),
     ),
   }),
+  v.object({
+    kind: v.literal("createEntry"),
+    title: v.string(),
+    body: v.string(),
+    startDate: v.string(),
+    endDate: v.union(v.string(), v.null()),
+  }),
+  v.object({
+    kind: v.literal("editEntry"),
+    entryId: v.id("narrativeEntries"),
+    expectedUpdatedAt: v.number(),
+    title: v.optional(v.string()),
+    body: v.optional(v.string()),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.union(v.string(), v.null())),
+  }),
 );
 
 export const proposalStatusValidator = v.union(
