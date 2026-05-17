@@ -44,6 +44,14 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
+  // Reset per-thread UI state when switching threads (including to/from
+  // the "no thread" new-chat state).
+  useEffect(() => {
+    setSendError(null);
+    setRenaming(false);
+    setRenameValue("");
+  }, [threadId]);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
