@@ -158,15 +158,27 @@ export const sendMessage = action({
 
     const system = await buildDynamicContext(ctx);
 
-    await chatAgent.streamText(
+    const result = await chatAgent.streamText(
       ctx,
       { threadId: args.threadId },
       {
         prompt: args.prompt,
         system,
+        onStepFinish: (step) => {
+          console.log("[chat] step finished:", {
+            finishReason: step.finishReason,
+            toolCalls: step.toolCalls?.map((c) => ({
+              toolName: c.toolName,
+              input: c.input,
+            })),
+            toolResultsCount: step.toolResults?.length ?? 0,
+            textLength: step.text?.length ?? 0,
+          });
+        },
       },
       { saveStreamDeltas: { chunking: "word", throttleMs: 100 } },
     );
+    await result.consumeStream();
 
     // Auto-title after the first exchange, fire-and-forget.
     await ctx.scheduler.runAfter(0, internal.chat.maybeGenerateTitle, {
