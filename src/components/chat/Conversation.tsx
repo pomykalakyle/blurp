@@ -61,17 +61,13 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
     el.scrollTop = el.scrollHeight;
   }, [messages?.length, messages?.[messages.length - 1]?.text]);
 
-  // Cards are keyed by the user-prompt message ID of the turn that
-  // produced them (the SDK exposes promptMessageId on the tool ctx, not
-  // the assistant's _id). When rendering, we look up each assistant
-  // message's cards via the most recent user message before it.
-  const cardsByPromptMessage = (() => {
+  const cardsByMessage = (() => {
     const map = new Map<string, Doc<"proposalCards">[]>();
     if (!cards) return map;
     for (const c of cards) {
-      const list = map.get(c.promptMessageId) ?? [];
+      const list = map.get(c.messageId) ?? [];
       list.push(c);
-      map.set(c.promptMessageId, list);
+      map.set(c.messageId, list);
     }
     return map;
   })();
@@ -174,25 +170,13 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
             </div>
           )}
 
-          {(() => {
-            let lastUserId: string | undefined = undefined;
-            return messages.map((m) => {
-              const role = (m as { role?: string }).role;
-              const id = (m as { id?: string }).id;
-              if (role === "user" && id) lastUserId = id;
-              const cardsForMessage =
-                role === "assistant" && lastUserId
-                  ? cardsByPromptMessage.get(lastUserId) ?? []
-                  : [];
-              return (
-                <Message
-                  key={m.key}
-                  message={m as never}
-                  cards={cardsForMessage}
-                />
-              );
-            });
-          })()}
+          {messages.map((m) => (
+            <Message
+              key={m.key}
+              message={m as never}
+              cards={cardsByMessage.get((m as { id?: string }).id ?? "") ?? []}
+            />
+          ))}
 
           {sending && <TypingIndicator />}
 

@@ -52,17 +52,14 @@ const lookupEndedGoals = createTool({
 });
 
 async function requireThreadAndMessage(
-  ctx: { threadId?: string; promptMessageId?: string; messageId?: string },
-): Promise<{ threadId: string; promptMessageId: string }> {
-  // The SDK's runtime sets promptMessageId on the tool ctx; the type
-  // declaration calls it messageId. Read both to be safe.
-  const promptMessageId = ctx.promptMessageId ?? ctx.messageId;
-  if (!ctx.threadId || !promptMessageId) {
+  ctx: { threadId?: string; messageId?: string },
+): Promise<{ threadId: string; messageId: string }> {
+  if (!ctx.threadId || !ctx.messageId) {
     throw new Error(
-      "Tool called outside an assistant turn — threadId or promptMessageId missing",
+      "Tool called outside an assistant turn — threadId or messageId missing",
     );
   }
-  return { threadId: ctx.threadId, promptMessageId };
+  return { threadId: ctx.threadId, messageId: ctx.messageId };
 }
 
 /**
@@ -81,10 +78,10 @@ function makeProposeTool<I>(opts: {
     description: opts.description,
     inputSchema: opts.inputSchema,
     execute: async (ctx, input): Promise<ProposedResult> => {
-      const { threadId, promptMessageId } = await requireThreadAndMessage(ctx);
+      const { threadId, messageId } = await requireThreadAndMessage(ctx);
       await ctx.runMutation(internal.chatProposals.internalCreate, {
         threadId,
-        promptMessageId,
+        messageId,
         proposal: opts.toProposal(input) as never,
       });
       return { proposed: true };

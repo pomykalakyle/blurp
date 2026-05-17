@@ -6,14 +6,14 @@ import { proposalValidator } from "./proposalValidator";
 export const internalCreate = internalMutation({
   args: {
     threadId: v.string(),
-    promptMessageId: v.string(),
+    messageId: v.string(),
     proposal: proposalValidator,
   },
   returns: v.id("proposalCards"),
   handler: async (ctx, args) => {
     return await ctx.db.insert("proposalCards", {
       threadId: args.threadId,
-      promptMessageId: args.promptMessageId,
+      messageId: args.messageId,
       proposal: args.proposal,
       status: "live",
       resolvedAt: null,

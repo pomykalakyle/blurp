@@ -32,16 +32,13 @@ export default defineSchema({
 
   proposalCards: defineTable({
     threadId: v.string(),
-    // The user-prompt message ID for the turn that produced this card.
-    // The agent SDK exposes promptMessageId (not the assistant's _id) on
-    // the tool ctx at execute time, so cards are keyed off the prompt.
-    promptMessageId: v.string(),
+    messageId: v.string(),
     proposal: proposalValidator,
     status: proposalStatusValidator,
     resolvedAt: v.union(v.number(), v.null()),
   })
     .index("by_thread_status", ["threadId", "status"])
-    .index("by_prompt_message", ["promptMessageId"]),
+    .index("by_message", ["messageId"]),
 
   narrativeEntries: defineTable({
     title: v.string(),
