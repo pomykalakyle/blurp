@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 const goalDoc = v.object({
@@ -99,5 +99,17 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return null;
+  },
+});
+
+export const listEnded = internalQuery({
+  args: {},
+  returns: v.array(goalDoc),
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("goals")
+      .withIndex("by_endedAt")
+      .filter((q) => q.neq(q.field("endedAt"), null))
+      .collect();
   },
 });

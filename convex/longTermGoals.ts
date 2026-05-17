@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 const ltgDoc = v.object({
@@ -65,3 +65,16 @@ export const reopen = mutation({
     return null;
   },
 });
+
+export const listArchived = internalQuery({
+  args: {},
+  returns: v.array(ltgDoc),
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("longTermGoals")
+      .withIndex("by_endedAt")
+      .filter((q) => q.neq(q.field("endedAt"), null))
+      .collect();
+  },
+});
+
