@@ -16,7 +16,7 @@ export function Input({ disabled, sending, onSend, placeholder }: Props) {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    el.style.height = el.scrollHeight + "px";
   }, [value]);
 
   const submit = async () => {
@@ -44,8 +44,9 @@ export function Input({ disabled, sending, onSend, placeholder }: Props) {
           disabled={disabled}
           rows={1}
           placeholder={placeholder ?? "Message Claude…"}
+          style={{ overflow: "hidden", resize: "none" }}
           className="
-            flex-1 resize-none rounded-2xl bg-surface-2 text-cream text-sm
+            flex-1 rounded-2xl bg-surface-2 text-cream text-sm
             px-4 py-3 outline-none border border-default focus-border-accent
             placeholder-faint
           "
