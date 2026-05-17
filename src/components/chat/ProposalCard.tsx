@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Check, Loader2, X } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { Doc, Id } from "../../../convex/_generated/dataModel";
+import { formatEntryDateRange } from "../../lib/date";
 
 type CardDoc = Doc<"proposalCards">;
 
@@ -10,6 +11,7 @@ function summarize(
   proposal: CardDoc["proposal"],
   ltgs: Array<{ _id: string; title: string }>,
   goals: Array<{ _id: string; title: string }>,
+  entries: Array<{ _id: string; title: string }>,
 ): { kindLabel: string; body: string } {
   switch (proposal.kind) {
     case "createGoal": {
@@ -90,6 +92,28 @@ function summarize(
         body: `"${goal?.title ?? "(unknown goal)"}" — ${label}`,
       };
     }
+    case "createEntry": {
+      return {
+        kindLabel: "Add narrative entry",
+        body: `"${proposal.title}" (${formatEntryDateRange(proposal.startDate, proposal.endDate)})\n${proposal.body}`,
+      };
+    }
+    case "editEntry": {
+      const entry = entries.find((e) => e._id === proposal.entryId);
+      const changes: string[] = [];
+      if (proposal.title !== undefined) changes.push(`title → "${proposal.title}"`);
+      if (proposal.body !== undefined) changes.push(`body →\n${proposal.body}`);
+      if (proposal.startDate !== undefined)
+        changes.push(`start date → ${proposal.startDate}`);
+      if (proposal.endDate !== undefined)
+        changes.push(
+          `end date → ${proposal.endDate === null ? "ongoing" : proposal.endDate}`,
+        );
+      return {
+        kindLabel: "Edit narrative entry",
+        body: `"${entry?.title ?? "(unknown entry)"}"\n${changes.join("\n")}`,
+      };
+    }
   }
 }
 
@@ -100,14 +124,21 @@ type Props = {
 export function ProposalCard({ card }: Props) {
   const ltgs = useQuery(api.longTermGoals.list) ?? [];
   const goals = useQuery(api.goals.list) ?? [];
+  const entries = useQuery(api.narrativeEntries.list) ?? [];
   const accept = useMutation(api.chatProposals.accept);
   const dismiss = useMutation(api.chatProposals.dismiss);
 
   const [pending, setPending] = useState<"accept" | "dismiss" | null>(null);
 
   const { kindLabel, body } = useMemo(
-    () => summarize(card.proposal, ltgs as Array<{ _id: string; title: string }>, goals as Array<{ _id: string; title: string }>),
-    [card.proposal, ltgs, goals],
+    () =>
+      summarize(
+        card.proposal,
+        ltgs as Array<{ _id: string; title: string }>,
+        goals as Array<{ _id: string; title: string }>,
+        entries as Array<{ _id: string; title: string }>,
+      ),
+    [card.proposal, ltgs, goals, entries],
   );
 
   if (card.status === "accepted") {

@@ -135,6 +135,30 @@ async function applyProposal(
       });
       return { applied: true };
     }
+    case "createEntry": {
+      await ctx.db.insert("narrativeEntries", {
+        title: p.title,
+        body: p.body,
+        startDate: p.startDate,
+        endDate: p.endDate,
+        updatedAt: Date.now(),
+      });
+      return { applied: true };
+    }
+    case "editEntry": {
+      const target = await ctx.db.get(p.entryId);
+      if (!target) return { applied: false, staleReason: "entry no longer exists" };
+      if (target.updatedAt !== p.expectedUpdatedAt) {
+        return { applied: false, staleReason: "entry has been edited since this was proposed" };
+      }
+      const patch: Record<string, unknown> = { updatedAt: Date.now() };
+      if (p.title !== undefined) patch.title = p.title;
+      if (p.body !== undefined) patch.body = p.body;
+      if (p.startDate !== undefined) patch.startDate = p.startDate;
+      if (p.endDate !== undefined) patch.endDate = p.endDate;
+      await ctx.db.patch(p.entryId, patch);
+      return { applied: true };
+    }
   }
 }
 

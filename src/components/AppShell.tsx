@@ -1,9 +1,21 @@
 import { ReactNode } from "react";
-import { Menu, MessageSquare, Plus, Target, X } from "lucide-react";
+import { BookOpen, Menu, MessageSquare, Plus, Target, X } from "lucide-react";
 import { FONT_DISPLAY } from "./ui";
 import { ChatList } from "./chat/ChatList";
 
-export type Section = "goals" | "chat";
+export type Section = "goals" | "chat" | "narrative";
+
+const SECTION_LABELS: Record<Section, string> = {
+  goals: "Goals",
+  chat: "Chat",
+  narrative: "Narrative",
+};
+
+const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
+  { id: "goals", icon: Target },
+  { id: "chat", icon: MessageSquare },
+  { id: "narrative", icon: BookOpen },
+];
 
 type Props = {
   activeSection: Section;
@@ -71,36 +83,24 @@ export function AppShell(props: Props) {
         </div>
 
         <nav className="px-3 pt-4 pb-2">
-          <button
-            onClick={() => selectSection("goals")}
-            className={`
-              w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm
-              transition-colors
-              ${
-                activeSection === "goals"
-                  ? "bg-surface-2 text-cream"
-                  : "text-dim hover-bg-surface hover-text-cream"
-              }
-            `}
-          >
-            <Target size={16} />
-            Goals
-          </button>
-          <button
-            onClick={() => selectSection("chat")}
-            className={`
-              w-full mt-1 flex items-center gap-3 px-3 py-2 rounded-md text-sm
-              transition-colors
-              ${
-                activeSection === "chat"
-                  ? "bg-surface-2 text-cream"
-                  : "text-dim hover-bg-surface hover-text-cream"
-              }
-            `}
-          >
-            <MessageSquare size={16} />
-            Chat
-          </button>
+          {SECTION_ITEMS.map(({ id, icon: Icon }, idx) => (
+            <button
+              key={id}
+              onClick={() => selectSection(id)}
+              className={`
+                w-full ${idx === 0 ? "" : "mt-1"} flex items-center gap-3 px-3 py-2 rounded-md text-sm
+                transition-colors
+                ${
+                  activeSection === id
+                    ? "bg-surface-2 text-cream"
+                    : "text-dim hover-bg-surface hover-text-cream"
+                }
+              `}
+            >
+              <Icon size={16} />
+              {SECTION_LABELS[id]}
+            </button>
+          ))}
         </nav>
 
         {activeSection === "chat" && (
@@ -144,7 +144,7 @@ export function AppShell(props: Props) {
             className="text-base font-semibold text-cream"
             style={{ fontFamily: FONT_DISPLAY }}
           >
-            {activeSection === "goals" ? "Goals" : "Chat"}
+            {SECTION_LABELS[activeSection]}
           </span>
         </header>
 

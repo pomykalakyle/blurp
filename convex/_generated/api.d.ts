@@ -15,6 +15,7 @@ import type * as chatLookups from "../chatLookups.js";
 import type * as chatProposals from "../chatProposals.js";
 import type * as goals from "../goals.js";
 import type * as longTermGoals from "../longTermGoals.js";
+import type * as narrativeEntries from "../narrativeEntries.js";
 import type * as ping from "../ping.js";
 import type * as proposalValidator from "../proposalValidator.js";
 
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   chatProposals: typeof chatProposals;
   goals: typeof goals;
   longTermGoals: typeof longTermGoals;
+  narrativeEntries: typeof narrativeEntries;
   ping: typeof ping;
   proposalValidator: typeof proposalValidator;
 }>;
