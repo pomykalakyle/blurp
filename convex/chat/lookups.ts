@@ -1,4 +1,4 @@
-import { internalQuery } from "./_generated/server";
+import { internalQuery } from "../_generated/server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CONTEXT_WINDOW_DAYS = 14;

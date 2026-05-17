@@ -9,11 +9,11 @@ import {
 import { paginationOptsValidator } from "convex/server";
 import { gateway } from "@ai-sdk/gateway";
 import { generateText } from "ai";
-import { action, internalAction, mutation, query } from "./_generated/server";
-import { components, internal } from "./_generated/api";
-import { chatAgent } from "./chatAgent";
-import { ABOUT_KYLE_SYSTEM, TITLE_MODEL } from "./chatConstants";
-import type { Doc } from "./_generated/dataModel";
+import { action, internalAction, mutation, query } from "../_generated/server";
+import { components, internal } from "../_generated/api";
+import { chatAgent } from "./agent";
+import { ABOUT_KYLE_SYSTEM, TITLE_MODEL } from "./constants";
+import type { Doc } from "../_generated/dataModel";
 
 const USER_ID = "kyle";
 
@@ -68,18 +68,18 @@ export const listMessages = query({
 });
 
 async function buildDynamicContext(
-  ctx: { runQuery: import("./_generated/server").ActionCtx["runQuery"] },
+  ctx: { runQuery: import("../_generated/server").ActionCtx["runQuery"] },
 ): Promise<string> {
   const activeLtgs: Doc<"longTermGoals">[] = await ctx.runQuery(
-    internal.chatLookups.listActiveLtgs,
+    internal.chat.lookups.listActiveLtgs,
     {},
   );
   const currentGoals: Doc<"goals">[] = await ctx.runQuery(
-    internal.chatLookups.listCurrentGoals,
+    internal.chat.lookups.listCurrentGoals,
     {},
   );
   const recentEntries: Doc<"narrativeEntries">[] = await ctx.runQuery(
-    internal.chatLookups.listEntriesInContextWindow,
+    internal.chat.lookups.listEntriesInContextWindow,
     {},
   );
 
@@ -152,7 +152,7 @@ export const sendMessage = action({
   handler: async (ctx, args) => {
     // Expire any live proposal cards from prior turns — sending a new
     // message implicitly dismisses them.
-    await ctx.runMutation(internal.chatProposals.expireLiveOnThread, {
+    await ctx.runMutation(internal.chat.proposals.expireLiveOnThread, {
       threadId: args.threadId,
     });
 
@@ -181,7 +181,7 @@ export const sendMessage = action({
     await result.consumeStream();
 
     // Auto-title after the first exchange, fire-and-forget.
-    await ctx.scheduler.runAfter(0, internal.chat.maybeGenerateTitle, {
+    await ctx.scheduler.runAfter(0, internal.chat.public.maybeGenerateTitle, {
       threadId: args.threadId,
     });
 

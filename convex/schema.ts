@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { proposalValidator, proposalStatusValidator } from "./proposalValidator";
+import { proposalValidator, proposalStatusValidator } from "./chat/proposalValidator";
 
 const goalStateValidator = v.object({
   done: v.optional(v.boolean()),

@@ -9,8 +9,8 @@ type Props = {
 };
 
 export function ChatList({ currentThreadId, onSelect }: Props) {
-  const threads = useQuery(api.chat.listThreads);
-  const renameThread = useMutation(api.chat.renameThread);
+  const threads = useQuery(api.chat.public.listThreads);
+  const renameThread = useMutation(api.chat.public.renameThread);
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
