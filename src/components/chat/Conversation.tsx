@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useUIMessages } from "@convex-dev/agent/react";
-import { Edit2, Loader2 } from "lucide-react";
+import { AlertTriangle, Edit2, Loader2, RotateCcw } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { Doc } from "../../../convex/_generated/dataModel";
 import { Message } from "./Message";
 import { Input } from "./Input";
+import { TypingIndicator } from "./TypingIndicator";
 import { FONT_DISPLAY } from "../ui";
 
 type Props = {
@@ -36,6 +37,10 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
   );
 
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<{
+    text: string;
+    message: string;
+  } | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
@@ -60,6 +65,7 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
   })();
 
   const handleSend = async (text: string) => {
+    setSendError(null);
     setSending(true);
     try {
       let tid = threadId;
@@ -68,9 +74,22 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
         onThreadCreated(tid);
       }
       await sendMessage({ threadId: tid, prompt: text });
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message.replace(/^Uncaught Error:\s*/, "").split("\n")[0]
+          : "Couldn't reach Claude.";
+      setSendError({ text, message });
     } finally {
       setSending(false);
     }
+  };
+
+  const handleRetry = async () => {
+    if (!sendError) return;
+    const text = sendError.text;
+    setSendError(null);
+    await handleSend(text);
   };
 
   const handleRename = async () => {
@@ -151,9 +170,25 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
             />
           ))}
 
-          {sending && (
-            <div className="flex items-center gap-2 text-xs text-faint italic my-2">
-              <Loader2 size={12} className="animate-spin" /> Thinking…
+          {sending && <TypingIndicator />}
+
+          {sendError && (
+            <div className="my-3 rounded-lg border border-danger bg-danger-tint p-3 max-w-md fade-in">
+              <div className="flex items-start gap-2 text-sm text-danger-strong">
+                <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-medium mb-1">Couldn't reach Claude</div>
+                  <div className="text-xs text-dim mb-2 break-words">
+                    {sendError.message}
+                  </div>
+                  <button
+                    onClick={handleRetry}
+                    className="text-xs text-cream hover-text-accent inline-flex items-center gap-1"
+                  >
+                    <RotateCcw size={11} /> Retry
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
