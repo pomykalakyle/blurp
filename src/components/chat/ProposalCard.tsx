@@ -125,8 +125,8 @@ export function ProposalCard({ card }: Props) {
   const ltgs = useQuery(api.longTermGoals.list) ?? [];
   const goals = useQuery(api.goals.list) ?? [];
   const entries = useQuery(api.narrativeEntries.list) ?? [];
-  const accept = useMutation(api.chatProposals.accept);
-  const dismiss = useMutation(api.chatProposals.dismiss);
+  const accept = useMutation(api.chat.proposals.accept);
+  const dismiss = useMutation(api.chat.proposals.dismiss);
 
   const [pending, setPending] = useState<"accept" | "dismiss" | null>(null);
 

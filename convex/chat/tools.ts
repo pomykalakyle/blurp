@@ -1,9 +1,7 @@
-import { Agent, createTool, stepCountIs } from "@convex-dev/agent";
-import { gateway } from "@ai-sdk/gateway";
+import { createTool } from "@convex-dev/agent";
 import { z } from "zod";
-import { components, internal } from "./_generated/api";
-import { ABOUT_KYLE_SYSTEM, CHAT_MODEL } from "./chatConstants";
-import type { Doc } from "./_generated/dataModel";
+import { internal } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel";
 
 type ProposedResult = { proposed: true };
 type LtgLookupResult = { id: string; title: string; description: string; archivedAt: number | null };
@@ -17,7 +15,7 @@ type GoalLookupResult = {
 
 const goalTypeSchema = z.enum(["achievement", "avoidance"]);
 
-const lookupArchivedLtgs = createTool({
+export const lookupArchivedLtgs = createTool({
   description:
     "List Kyle's archived (no longer active) long-term goals. Use when the conversation references something older that may not be in the current set.",
   inputSchema: z.object({}),
@@ -35,7 +33,7 @@ const lookupArchivedLtgs = createTool({
   },
 });
 
-const lookupEndedGoals = createTool({
+export const lookupEndedGoals = createTool({
   description:
     "List Kyle's ended weekly goals (goals he marked complete or that aged out). Use when the conversation looks back on past goals.",
   inputSchema: z.object({}),
@@ -79,7 +77,7 @@ function makeProposeTool<I>(opts: {
     inputSchema: opts.inputSchema,
     execute: async (ctx, input): Promise<ProposedResult> => {
       const { threadId, messageId } = await requireThreadAndMessage(ctx);
-      await ctx.runMutation(internal.chatProposals.internalCreate, {
+      await ctx.runMutation(internal.chat.proposals.internalCreate, {
         threadId,
         messageId,
         proposal: opts.toProposal(input) as never,
@@ -89,7 +87,7 @@ function makeProposeTool<I>(opts: {
   });
 }
 
-const proposeCreateGoal = makeProposeTool({
+export const proposeCreateGoal = makeProposeTool({
   description:
     "Propose adding a new weekly goal to Kyle's list. Surfaces as a card he taps to accept; does NOT add the goal directly. Use when you want Kyle to consider tracking a new goal.",
   inputSchema: z.object({
@@ -114,7 +112,7 @@ const proposeCreateGoal = makeProposeTool({
   }),
 });
 
-const proposeCreateLtg = makeProposeTool({
+export const proposeCreateLtg = makeProposeTool({
   description:
     "Propose creating a new long-term goal. Surfaces as a card Kyle accepts.",
   inputSchema: z.object({
@@ -128,7 +126,7 @@ const proposeCreateLtg = makeProposeTool({
   }),
 });
 
-const proposeEditGoal = makeProposeTool({
+export const proposeEditGoal = makeProposeTool({
   description:
     "Propose editing an existing weekly goal (rename, change parent, end date, or notes). Surfaces as a card Kyle accepts.",
   inputSchema: z.object({
@@ -148,7 +146,7 @@ const proposeEditGoal = makeProposeTool({
   }),
 });
 
-const proposeEditLtg = makeProposeTool({
+export const proposeEditLtg = makeProposeTool({
   description:
     "Propose editing an existing long-term goal (rename or change description). Surfaces as a card.",
   inputSchema: z.object({
@@ -164,7 +162,7 @@ const proposeEditLtg = makeProposeTool({
   }),
 });
 
-const proposeArchiveLtg = makeProposeTool({
+export const proposeArchiveLtg = makeProposeTool({
   description:
     "Propose archiving a long-term goal Kyle has outgrown. Surfaces as a card.",
   inputSchema: z.object({
@@ -173,7 +171,7 @@ const proposeArchiveLtg = makeProposeTool({
   toProposal: (input) => ({ kind: "archiveLtg", ltgId: input.ltgId }),
 });
 
-const proposeToggleGoalState = makeProposeTool({
+export const proposeToggleGoalState = makeProposeTool({
   description:
     "Propose toggling a goal's state — marking an achievement as done, or flagging an avoidance as slipped. Surfaces as a card.",
   inputSchema: z.object({
@@ -190,7 +188,7 @@ const proposeToggleGoalState = makeProposeTool({
   }),
 });
 
-const proposeCreateEntry = makeProposeTool({
+export const proposeCreateEntry = makeProposeTool({
   description:
     "Propose adding a new narrative entry — an event, decision, thought, or thing Kyle is working through. Surfaces as a card he accepts to save to the timeline. Use granular entries (one event per entry) rather than mashing things together. Set endDate equal to startDate for a single-day event, a later ISO date for a span, or null if the event is ongoing.",
   inputSchema: z.object({
@@ -211,7 +209,7 @@ const proposeCreateEntry = makeProposeTool({
   }),
 });
 
-const proposeEditEntry = makeProposeTool({
+export const proposeEditEntry = makeProposeTool({
   description:
     "Propose editing an existing narrative entry. Use this to append a reflection, fix the title, correct dates, or close an ongoing entry by setting its endDate. You must pass the entry's current updatedAt timestamp so the system can detect if the entry changed since you proposed.",
   inputSchema: z.object({
@@ -240,27 +238,4 @@ const proposeEditEntry = makeProposeTool({
     ...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
     ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
   }),
-});
-
-export const chatAgent: Agent = new Agent(components.agent, {
-  name: "BlurpChat",
-  languageModel: gateway(CHAT_MODEL),
-  instructions: ABOUT_KYLE_SYSTEM,
-  // Enables multi-step tool calling. Without this (or with stepCountIs(1)),
-  // the AI SDK runs the agent in single-step mode and tool execute() functions
-  // do not run — the model just emits tool-call descriptions in the stream.
-  // 10 steps gives plenty of headroom for chained tool calls in a turn.
-  stopWhen: stepCountIs(10),
-  tools: {
-    lookup_archived_ltgs: lookupArchivedLtgs,
-    lookup_ended_goals: lookupEndedGoals,
-    propose_create_goal: proposeCreateGoal,
-    propose_create_ltg: proposeCreateLtg,
-    propose_edit_goal: proposeEditGoal,
-    propose_edit_ltg: proposeEditLtg,
-    propose_archive_ltg: proposeArchiveLtg,
-    propose_toggle_goal_state: proposeToggleGoalState,
-    propose_create_entry: proposeCreateEntry,
-    propose_edit_entry: proposeEditEntry,
-  },
 });

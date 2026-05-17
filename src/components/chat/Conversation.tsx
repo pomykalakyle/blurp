@@ -15,23 +15,23 @@ type Props = {
 };
 
 export function Conversation({ threadId, onThreadCreated }: Props) {
-  const createThread = useMutation(api.chat.createThread);
-  const sendMessage = useAction(api.chat.sendMessage);
-  const renameThread = useMutation(api.chat.renameThread);
+  const createThread = useMutation(api.chat.public.createThread);
+  const sendMessage = useAction(api.chat.public.sendMessage);
+  const renameThread = useMutation(api.chat.public.renameThread);
 
   const thread = useQuery(
-    api.chat.listThreads,
+    api.chat.public.listThreads,
     threadId ? undefined : "skip",
   );
   const currentThread = thread?.find((t) => t._id === threadId) ?? null;
 
   const cards = useQuery(
-    api.chatProposals.listForThread,
+    api.chat.proposals.listForThread,
     threadId ? { threadId } : "skip",
   );
 
   const { results: messages, status } = useUIMessages(
-    api.chat.listMessages,
+    api.chat.public.listMessages,
     threadId ? { threadId } : "skip",
     { initialNumItems: 30, stream: true },
   );

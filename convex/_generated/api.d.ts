@@ -8,16 +8,17 @@
  * @module
  */
 
-import type * as chat from "../chat.js";
-import type * as chatAgent from "../chatAgent.js";
-import type * as chatConstants from "../chatConstants.js";
-import type * as chatLookups from "../chatLookups.js";
-import type * as chatProposals from "../chatProposals.js";
+import type * as chat_agent from "../chat/agent.js";
+import type * as chat_constants from "../chat/constants.js";
+import type * as chat_lookups from "../chat/lookups.js";
+import type * as chat_proposalValidator from "../chat/proposalValidator.js";
+import type * as chat_proposals from "../chat/proposals.js";
+import type * as chat_public from "../chat/public.js";
+import type * as chat_tools from "../chat/tools.js";
 import type * as goals from "../goals.js";
 import type * as longTermGoals from "../longTermGoals.js";
 import type * as narrativeEntries from "../narrativeEntries.js";
 import type * as ping from "../ping.js";
-import type * as proposalValidator from "../proposalValidator.js";
 
 import type {
   ApiFromModules,
@@ -26,16 +27,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  chat: typeof chat;
-  chatAgent: typeof chatAgent;
-  chatConstants: typeof chatConstants;
-  chatLookups: typeof chatLookups;
-  chatProposals: typeof chatProposals;
+  "chat/agent": typeof chat_agent;
+  "chat/constants": typeof chat_constants;
+  "chat/lookups": typeof chat_lookups;
+  "chat/proposalValidator": typeof chat_proposalValidator;
+  "chat/proposals": typeof chat_proposals;
+  "chat/public": typeof chat_public;
+  "chat/tools": typeof chat_tools;
   goals: typeof goals;
   longTermGoals: typeof longTermGoals;
   narrativeEntries: typeof narrativeEntries;
   ping: typeof ping;
-  proposalValidator: typeof proposalValidator;
 }>;
 
 /**

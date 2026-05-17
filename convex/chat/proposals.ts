@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "./_generated/server";
-import { Doc } from "./_generated/dataModel";
+import { internalMutation, mutation, query } from "../_generated/server";
+import { Doc } from "../_generated/dataModel";
 import { proposalValidator } from "./proposalValidator";
 
 export const internalCreate = internalMutation({
@@ -66,7 +66,7 @@ export const dismiss = mutation({
 type CardDoc = Doc<"proposalCards">;
 
 async function applyProposal(
-  ctx: { db: import("./_generated/server").MutationCtx["db"] },
+  ctx: { db: import("../_generated/server").MutationCtx["db"] },
   card: CardDoc,
 ): Promise<{ applied: boolean; staleReason?: string }> {
   const p = card.proposal;
