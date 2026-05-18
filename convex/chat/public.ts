@@ -27,6 +27,108 @@ import {
 import { pacificDate } from "./dates";
 import type { Doc } from "../_generated/dataModel";
 
+type ProposalCard = Doc<"proposalCards">;
+
+function summarizeProposal(card: ProposalCard): string {
+  const p = card.proposal;
+  switch (p.kind) {
+    case "createGoal":
+      return `create weekly goal "${p.title}" (${p.type})`;
+    case "createLtg":
+      return `create long-term goal "${p.title}"`;
+    case "editGoal": {
+      const fields = [
+        p.title !== undefined ? `title→"${p.title}"` : null,
+        p.longTermGoalId !== undefined ? `parent→${p.longTermGoalId ?? "none"}` : null,
+        p.endDate !== undefined ? `endDate→${p.endDate ?? "none"}` : null,
+        p.notes !== undefined ? `notes→${p.notes ?? "none"}` : null,
+      ].filter((f): f is string => f !== null);
+      return `edit goal ${p.goalId} (${fields.join(", ") || "no fields"})`;
+    }
+    case "editLtg": {
+      const fields = [
+        p.title !== undefined ? `title→"${p.title}"` : null,
+        p.description !== undefined ? `description→"${p.description}"` : null,
+      ].filter((f): f is string => f !== null);
+      return `edit long-term goal ${p.ltgId} (${fields.join(", ") || "no fields"})`;
+    }
+    case "archiveLtg":
+      return `archive long-term goal ${p.ltgId}`;
+    case "deleteGoal":
+      return `delete weekly goal ${p.goalId}`;
+    case "deleteLtg":
+      return `delete long-term goal ${p.ltgId}`;
+    case "toggleGoalState": {
+      const ts = p.targetState;
+      const label =
+        "done" in ts ? `done→${ts.done}` : `slipped→${ts.slipped}`;
+      return `toggle goal ${p.goalId} state (${label})`;
+    }
+    case "createEntry":
+      return `create narrative entry "${p.title}" (${p.startDate}${p.endDate ? `→${p.endDate}` : ", ongoing"})`;
+    case "editEntry": {
+      const fields = [
+        p.title !== undefined ? `title→"${p.title}"` : null,
+        p.body !== undefined ? "body" : null,
+        p.startDate !== undefined ? `startDate→${p.startDate}` : null,
+        p.endDate !== undefined ? `endDate→${p.endDate ?? "ongoing"}` : null,
+      ].filter((f): f is string => f !== null);
+      return `edit entry ${p.entryId} (${fields.join(", ") || "no fields"})`;
+    }
+  }
+}
+
+function describeStatus(card: ProposalCard): string {
+  switch (card.status) {
+    case "accepted":
+      return "ACCEPTED (applied)";
+    case "dismissed":
+      return "DISMISSED by Kyle";
+    case "expired":
+      return "EXPIRED (Kyle moved on without acting on the card)";
+    case "stale":
+      return "STALE (Kyle accepted but the change could not be applied — underlying data had moved)";
+    case "live":
+      return "still LIVE";
+  }
+}
+
+async function findPriorUserMessageId(
+  ctx: { runQuery: import("../_generated/server").ActionCtx["runQuery"] },
+  threadId: string,
+): Promise<string | null> {
+  const result = await ctx.runQuery(
+    components.agent.messages.listMessagesByThreadId,
+    {
+      threadId,
+      order: "desc",
+      paginationOpts: { cursor: null, numItems: 20 },
+    },
+  );
+  const userMsg = result.page.find((m) => m.message?.role === "user");
+  return userMsg?._id ?? null;
+}
+
+async function buildPriorTurnProposalsBlock(
+  ctx: { runQuery: import("../_generated/server").ActionCtx["runQuery"] },
+  threadId: string,
+): Promise<string> {
+  const priorUserMsgId = await findPriorUserMessageId(ctx, threadId);
+  if (!priorUserMsgId) return "";
+  const cards: ProposalCard[] = await ctx.runQuery(
+    internal.chat.proposals.listByPromptMessage,
+    { promptMessageId: priorUserMsgId },
+  );
+  if (cards.length === 0) return "";
+  const lines = cards.map(
+    (c) => `- ${summarizeProposal(c)} — ${describeStatus(c)}`,
+  );
+  return `\n\n<previous-turn-proposals>
+These are the proposal cards you surfaced on your previous turn and what Kyle did with them. Take these outcomes into account before re-proposing the same thing.
+${lines.join("\n")}
+</previous-turn-proposals>`;
+}
+
 const USER_ID = "kyle";
 
 export const createThread = mutation({
@@ -234,7 +336,9 @@ export const sendMessage = action({
   returns: v.null(),
   handler: async (ctx, args) => {
     // Expire any live proposal cards from prior turns — sending a new
-    // message implicitly dismisses them.
+    // message implicitly dismisses them. Runs before we read card status
+    // for the prior-turn outcomes block so freshly-expired cards are
+    // included.
     await ctx.runMutation(internal.chat.proposals.expireLiveOnThread, {
       threadId: args.threadId,
     });
@@ -245,10 +349,14 @@ export const sendMessage = action({
     );
 
     const baseSystem = await buildDynamicContext(ctx);
+    const priorProposalsBlock = await buildPriorTurnProposalsBlock(
+      ctx,
+      args.threadId,
+    );
     const system =
-      kind === "goal_check_in"
+      (kind === "goal_check_in"
         ? `${baseSystem}\n\n${CHECK_IN_INSTRUCTIONS}`
-        : baseSystem;
+        : baseSystem) + priorProposalsBlock;
 
     const result = await chatAgent.streamText(
       ctx,
