@@ -6,6 +6,7 @@ const ltgDoc = v.object({
   _creationTime: v.number(),
   title: v.string(),
   description: v.string(),
+  notes: v.optional(v.union(v.string(), v.null())),
   endedAt: v.union(v.number(), v.null()),
 });
 
@@ -21,12 +22,14 @@ export const create = mutation({
   args: {
     title: v.string(),
     description: v.string(),
+    notes: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.id("longTermGoals"),
   handler: async (ctx, args) => {
     return await ctx.db.insert("longTermGoals", {
       title: args.title,
       description: args.description,
+      notes: args.notes ?? null,
       endedAt: null,
     });
   },
@@ -37,12 +40,14 @@ export const update = mutation({
     id: v.id("longTermGoals"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
+    notes: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const patch: { title?: string; description?: string } = {};
+    const patch: { title?: string; description?: string; notes?: string | null } = {};
     if (args.title !== undefined) patch.title = args.title;
     if (args.description !== undefined) patch.description = args.description;
+    if (args.notes !== undefined) patch.notes = args.notes;
     await ctx.db.patch(args.id, patch);
     return null;
   },
@@ -77,4 +82,3 @@ export const listArchived = internalQuery({
       .collect();
   },
 });
-

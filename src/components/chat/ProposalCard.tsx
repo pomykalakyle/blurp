@@ -10,7 +10,11 @@ type CardDoc = Doc<"proposalCards">;
 function summarize(
   proposal: CardDoc["proposal"],
   ltgs: Array<{ _id: string; title: string }>,
-  goals: Array<{ _id: string; title: string }>,
+  goals: Array<{
+    _id: string;
+    title: string;
+    type: "achievement" | "avoidance";
+  }>,
   entries: Array<{ _id: string; title: string }>,
 ): { kindLabel: string; body: string } {
   switch (proposal.kind) {
@@ -21,14 +25,14 @@ function summarize(
       const meta = [
         proposal.type,
         parent ? `under "${parent}"` : null,
-        proposal.endDate ? `ends ${proposal.endDate}` : null,
+        proposal.targetDate ? `target ${proposal.targetDate}` : null,
       ]
         .filter(Boolean)
         .join(" · ");
       return {
         kindLabel: "Add goal",
         body: `"${proposal.title}"${meta ? ` — ${meta}` : ""}${
-          proposal.notes ? `\nNote: ${proposal.notes}` : ""
+          proposal.description ? `\n${proposal.description}` : ""
         }`,
       };
     }
@@ -37,7 +41,7 @@ function summarize(
         kindLabel: "Add long-term goal",
         body: `"${proposal.title}"${
           proposal.description ? ` — ${proposal.description}` : ""
-        }`,
+        }${proposal.notes ? `\nNotes: ${proposal.notes}` : ""}`,
       };
     case "editGoal": {
       const goal = goals.find((g) => g._id === proposal.goalId);
@@ -49,10 +53,21 @@ function summarize(
           : "(no parent)";
         changes.push(`parent → ${parent}`);
       }
-      if (proposal.endDate !== undefined)
-        changes.push(`end date → ${proposal.endDate ?? "none"}`);
+      if (proposal.description !== undefined)
+        changes.push(
+          `description → ${proposal.description ? `"${proposal.description}"` : "none"}`,
+        );
       if (proposal.notes !== undefined)
         changes.push(`notes → ${proposal.notes ? `"${proposal.notes}"` : "none"}`);
+      if (proposal.targetDate !== undefined)
+        changes.push(`target date → ${proposal.targetDate ?? "none"}`);
+      if (proposal.resolvedAt !== undefined) {
+        changes.push(
+          proposal.resolvedAt === null
+            ? "reopen (clear resolvedAt)"
+            : `resolvedAt → ${new Date(proposal.resolvedAt).toLocaleDateString()}`,
+        );
+      }
       return {
         kindLabel: "Edit goal",
         body: `"${goal?.title ?? "(unknown goal)"}"\n${changes.join("\n")}`,
@@ -64,6 +79,8 @@ function summarize(
       if (proposal.title !== undefined) changes.push(`title → "${proposal.title}"`);
       if (proposal.description !== undefined)
         changes.push(`description → "${proposal.description}"`);
+      if (proposal.notes !== undefined)
+        changes.push(`notes → ${proposal.notes ? `"${proposal.notes}"` : "none"}`);
       return {
         kindLabel: "Edit long-term goal",
         body: `"${ltg?.title ?? "(unknown LTG)"}"\n${changes.join("\n")}`,
@@ -90,20 +107,18 @@ function summarize(
         body: `"${ltg?.title ?? "(unknown LTG)"}"`,
       };
     }
-    case "toggleGoalState": {
+    case "resolveGoal": {
       const goal = goals.find((g) => g._id === proposal.goalId);
-      const targetState = proposal.targetState;
+      // Type-aware card label: achievement → "Mark complete", avoidance → "Flag slip".
       const label =
-        "done" in targetState
-          ? targetState.done
-            ? "mark done"
-            : "mark not done"
-          : targetState.slipped
-            ? "flag as slipped"
-            : "unflag";
+        goal?.type === "avoidance" ? "Flag slip" : "Mark complete";
+      const when = new Date(proposal.resolvedAt).toLocaleDateString();
+      const noteLine = proposal.notesAppend
+        ? `\nNote: ${proposal.notesAppend}`
+        : "";
       return {
-        kindLabel: "Update goal state",
-        body: `"${goal?.title ?? "(unknown goal)"}" — ${label}`,
+        kindLabel: label,
+        body: `"${goal?.title ?? "(unknown goal)"}" — ${when}${noteLine}`,
       };
     }
     case "createEntry": {
@@ -149,7 +164,11 @@ export function ProposalCard({ card }: Props) {
       summarize(
         card.proposal,
         ltgs as Array<{ _id: string; title: string }>,
-        goals as Array<{ _id: string; title: string }>,
+        goals as Array<{
+          _id: string;
+          title: string;
+          type: "achievement" | "avoidance";
+        }>,
         entries as Array<{ _id: string; title: string }>,
       ),
     [card.proposal, ltgs, goals, entries],
@@ -166,7 +185,7 @@ export function ProposalCard({ card }: Props) {
   if (card.status === "stale") {
     return (
       <div className="text-xs text-faint italic flex items-center gap-1.5 mt-1">
-        Couldn't apply — the goal changed since this was proposed.
+        Couldn't apply — the underlying record changed since this was proposed.
       </div>
     );
   }

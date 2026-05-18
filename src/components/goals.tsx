@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Archive, Check, ChevronDown, ChevronRight, Edit2, Flag, MoreHorizontal, Trash2 } from 'lucide-react';
 import { FONT_DISPLAY, IconButton } from './ui';
-import { isGoalSuccess } from '../lib/core';
+import { isGoalResolved, isGoalSuccess } from '../lib/core';
 
 function PortalMenu({ open, anchorRef, onClose, children }) {
   const [pos, setPos] = useState(null);
@@ -88,23 +88,31 @@ export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) 
   const [menuOpen, setMenuOpen] = useState(false);
   const goalMenuRef = useRef(null);
   const success = isGoalSuccess(goal);
-  const struck = goal.type === 'achievement' && goal.state?.done;
+  const resolved = isGoalResolved(goal);
+  const struck = goal.type === 'achievement' && resolved;
+  // Toggle button labels:
+  //   achievement resolved → "Reopen"; not resolved → "Mark complete"
+  //   avoidance   resolved → "Unmark slip" (reopen); not resolved → "Flag slip"
+  const toggleTitle = goal.type === 'achievement'
+    ? (resolved ? 'Reopen' : 'Mark complete')
+    : (resolved ? 'Unmark slip' : 'Flag slip');
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-soft last:border-b-0 hover-bg-surface-soft transition-colors">
       <button onClick={readOnly ? undefined : onToggle} disabled={readOnly} className="flex-shrink-0"
-        title={goal.type === 'achievement' ? (goal.state?.done ? 'Mark not done' : 'Mark done') : (goal.state?.slipped ? 'Unmark slip' : 'Mark slipped')}>
+        title={toggleTitle}>
         <GoalIcon goal={goal} />
       </button>
       <div className="flex-1 min-w-0">
         <div className={`text-sm ${struck ? 'line-through' : ''}`} style={{ color: struck ? 'var(--c-text-faint)' : (success ? 'var(--c-text)' : 'var(--c-text-muted)') }}>
           {goal.title}
         </div>
-        {goal.notes && <div className="text-xs text-muted mt-0.5">{goal.notes}</div>}
+        {goal.description && <div className="text-xs text-muted mt-0.5">{goal.description}</div>}
+        {goal.notes && <div className="text-xs text-faint mt-0.5 italic whitespace-pre-line">{goal.notes}</div>}
       </div>
-      {goal.endDate && (
+      {goal.targetDate && (
         <span className="text-[10px] uppercase tracking-widest text-faint whitespace-nowrap">
-          {new Date(goal.endDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          {new Date(goal.targetDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </span>
       )}
       <span className="text-[10px] uppercase tracking-widest text-faint">
@@ -128,8 +136,9 @@ export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) 
 }
 
 export function GoalIcon({ goal }) {
+  const resolved = isGoalResolved(goal);
   if (goal.type === 'achievement') {
-    if (goal.state?.done) {
+    if (resolved) {
       return (
         <div className="w-6 h-6 rounded-full flex items-center justify-center bg-success-tint border border-success">
           <Check size={14} className="text-success-strong" />
@@ -138,7 +147,8 @@ export function GoalIcon({ goal }) {
     }
     return <div className="w-6 h-6 rounded-full border-2 border-default" />;
   }
-  if (goal.state?.slipped) {
+  // Avoidance: resolved = slipped (failure); unresolved = still clean.
+  if (resolved) {
     return (
       <div className="w-6 h-6 rounded-full bg-danger-tint border border-danger flex items-center justify-center">
         <Flag size={12} className="icon-flag-fill" />

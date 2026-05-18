@@ -33,15 +33,19 @@ function summarizeProposal(card: ProposalCard): string {
   const p = card.proposal;
   switch (p.kind) {
     case "createGoal":
-      return `create weekly goal "${p.title}" (${p.type})`;
+      return `create goal "${p.title}" (${p.type})`;
     case "createLtg":
       return `create long-term goal "${p.title}"`;
     case "editGoal": {
       const fields = [
         p.title !== undefined ? `title→"${p.title}"` : null,
         p.longTermGoalId !== undefined ? `parent→${p.longTermGoalId ?? "none"}` : null,
-        p.endDate !== undefined ? `endDate→${p.endDate ?? "none"}` : null,
+        p.description !== undefined ? `description→${p.description ?? "none"}` : null,
         p.notes !== undefined ? `notes→${p.notes ?? "none"}` : null,
+        p.targetDate !== undefined ? `targetDate→${p.targetDate ?? "none"}` : null,
+        p.resolvedAt !== undefined
+          ? `resolvedAt→${p.resolvedAt === null ? "null (reopened)" : new Date(p.resolvedAt).toISOString()}`
+          : null,
       ].filter((f): f is string => f !== null);
       return `edit goal ${p.goalId} (${fields.join(", ") || "no fields"})`;
     }
@@ -49,21 +53,18 @@ function summarizeProposal(card: ProposalCard): string {
       const fields = [
         p.title !== undefined ? `title→"${p.title}"` : null,
         p.description !== undefined ? `description→"${p.description}"` : null,
+        p.notes !== undefined ? `notes→${p.notes ?? "none"}` : null,
       ].filter((f): f is string => f !== null);
       return `edit long-term goal ${p.ltgId} (${fields.join(", ") || "no fields"})`;
     }
     case "archiveLtg":
       return `archive long-term goal ${p.ltgId}`;
     case "deleteGoal":
-      return `delete weekly goal ${p.goalId}`;
+      return `delete goal ${p.goalId}`;
     case "deleteLtg":
       return `delete long-term goal ${p.ltgId}`;
-    case "toggleGoalState": {
-      const ts = p.targetState;
-      const label =
-        "done" in ts ? `done→${ts.done}` : `slipped→${ts.slipped}`;
-      return `toggle goal ${p.goalId} state (${label})`;
-    }
+    case "resolveGoal":
+      return `resolve goal ${p.goalId}${p.notesAppend ? ` (note: ${p.notesAppend})` : ""}`;
     case "createEntry":
       return `create narrative entry "${p.title}" (${p.startDate}${p.endDate ? `→${p.endDate}` : ", ongoing"})`;
     case "editEntry": {
@@ -150,14 +151,10 @@ export const createCheckInThread = mutation({
       threadId,
       kind: "goal_check_in",
     });
-    // Date-based default title so the list row has something readable before
-    // Kyle replies. Auto-titling is skipped for non-empty titles.
     await updateThreadMetadata(ctx, components.agent, {
       threadId,
       patch: { title: `Check-in · ${pacificDate()}` },
     });
-    // Kick off the assistant's opening message. Fire-and-forget so the UI
-    // can navigate to the chat immediately and the message streams in.
     await ctx.scheduler.runAfter(0, internal.chat.public.openCheckInChat, {
       threadId,
     });
@@ -252,6 +249,33 @@ export const listMessages = query({
   },
 });
 
+function formatGoalLine(
+  g: Doc<"goals">,
+  activeLtgs: Doc<"longTermGoals">[],
+): string {
+  const parent = g.longTermGoalId
+    ? activeLtgs.find((l) => l._id === g.longTermGoalId)?.title ?? "(unknown LTG)"
+    : null;
+  const parts = [`[${g._id}]`, `(${g.type})`, g.title];
+  if (parent) parts.push(`[under: ${parent}]`);
+  if (g.targetDate) parts.push(`(target ${g.targetDate})`);
+  if (g.resolvedAt) {
+    const outcome = g.type === "achievement" ? "completed" : "slipped";
+    parts.push(`(${outcome} ${new Date(g.resolvedAt).toISOString().slice(0, 10)})`);
+  }
+  let line = `- ${parts.join(" ")}`;
+  if (g.description) line += `\n  description: ${g.description}`;
+  if (g.notes) line += `\n  notes: ${g.notes.replace(/\n/g, "\n  ")}`;
+  return line;
+}
+
+function formatLtgLine(l: Doc<"longTermGoals">): string {
+  let line = `- [${l._id}] ${l.title}`;
+  if (l.description) line += ` — ${l.description}`;
+  if (l.notes) line += `\n  notes: ${l.notes.replace(/\n/g, "\n  ")}`;
+  return line;
+}
+
 async function buildDynamicContext(
   ctx: { runQuery: import("../_generated/server").ActionCtx["runQuery"] },
 ): Promise<string> {
@@ -259,8 +283,12 @@ async function buildDynamicContext(
     internal.chat.lookups.listActiveLtgs,
     {},
   );
-  const currentGoals: Doc<"goals">[] = await ctx.runQuery(
-    internal.chat.lookups.listCurrentGoals,
+  const openGoals: Doc<"goals">[] = await ctx.runQuery(
+    internal.chat.lookups.listOpenGoals,
+    {},
+  );
+  const recentlyResolved: Doc<"goals">[] = await ctx.runQuery(
+    internal.chat.lookups.listRecentlyResolvedGoals,
     {},
   );
   const recentEntries: Doc<"narrativeEntries">[] = await ctx.runQuery(
@@ -270,50 +298,35 @@ async function buildDynamicContext(
 
   const today = pacificDate();
 
-  const ltgLines = activeLtgs.length === 0
-    ? "(none)"
-    : activeLtgs
-        .map(
-          (l) =>
-            `- [${l._id}] ${l.title}${l.description ? ` — ${l.description}` : ""}`,
-        )
-        .join("\n");
+  const ltgLines =
+    activeLtgs.length === 0
+      ? "(none)"
+      : activeLtgs.map(formatLtgLine).join("\n");
 
-  const goalLines = currentGoals.length === 0
-    ? "(none)"
-    : currentGoals
-        .map((g) => {
-          const stateLabel =
-            g.type === "achievement"
-              ? g.state.done
-                ? "done"
-                : "not done"
-              : g.state.slipped
-                ? "slipped"
-                : "clean";
-          const parent =
-            g.longTermGoalId
-              ? activeLtgs.find((l) => l._id === g.longTermGoalId)?.title ??
-                "(unknown LTG)"
-              : null;
-          return `- [${g._id}] (${g.type}, ${stateLabel}) ${g.title}${
-            parent ? ` [under: ${parent}]` : ""
-          }${g.notes ? ` (note: ${g.notes})` : ""}${g.endDate ? ` (ends ${g.endDate})` : ""}`;
-        })
-        .join("\n");
+  const openGoalLines =
+    openGoals.length === 0
+      ? "(none)"
+      : openGoals.map((g) => formatGoalLine(g, activeLtgs)).join("\n");
 
-  const entryLines = recentEntries.length === 0
-    ? "(none)"
-    : recentEntries
-        .map((e) => {
-          const range = e.endDate === null
-            ? `${e.startDate} → ongoing`
-            : e.startDate === e.endDate
-              ? e.startDate
-              : `${e.startDate} → ${e.endDate}`;
-          return `- [${e._id}] (updatedAt: ${e.updatedAt}) (${range}) ${e.title}\n  ${e.body.replace(/\n/g, "\n  ")}`;
-        })
-        .join("\n");
+  const resolvedGoalLines =
+    recentlyResolved.length === 0
+      ? "(none)"
+      : recentlyResolved.map((g) => formatGoalLine(g, activeLtgs)).join("\n");
+
+  const entryLines =
+    recentEntries.length === 0
+      ? "(none)"
+      : recentEntries
+          .map((e) => {
+            const range =
+              e.endDate === null
+                ? `${e.startDate} → ongoing`
+                : e.startDate === e.endDate
+                  ? e.startDate
+                  : `${e.startDate} → ${e.endDate}`;
+            return `- [${e._id}] (updatedAt: ${e.updatedAt}) (${range}) ${e.title}\n  ${e.body.replace(/\n/g, "\n  ")}`;
+          })
+          .join("\n");
 
   return `${ABOUT_KYLE_SYSTEM}
 
@@ -323,8 +336,11 @@ Today: ${today}
 Active long-term goals:
 ${ltgLines}
 
-Current weekly goals:
-${goalLines}
+Open goals (not yet resolved):
+${openGoalLines}
+
+Recently resolved goals (within last 7 days — already done or slipped; do NOT re-prompt status on these):
+${resolvedGoalLines}
 
 Recent narrative entries (within last 2 weeks or ongoing):
 ${entryLines}
@@ -335,10 +351,6 @@ export const sendMessage = action({
   args: { threadId: v.string(), prompt: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Expire any live proposal cards from prior turns — sending a new
-    // message implicitly dismisses them. Runs before we read card status
-    // for the prior-turn outcomes block so freshly-expired cards are
-    // included.
     await ctx.runMutation(internal.chat.proposals.expireLiveOnThread, {
       threadId: args.threadId,
     });
@@ -380,9 +392,6 @@ export const sendMessage = action({
     );
     await result.consumeStream();
 
-    // Auto-title after the first exchange, fire-and-forget. Skipped for
-    // check-in chats — they get a date-based title at creation that we let
-    // stand unless Kyle renames.
     await ctx.scheduler.runAfter(0, internal.chat.public.maybeGenerateTitle, {
       threadId: args.threadId,
     });

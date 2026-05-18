@@ -52,8 +52,8 @@ export function GoalsScreen() {
   const reopenLtg = useMutation(api.longTermGoals.reopen);
   const createGoal = useMutation(api.goals.create);
   const updateGoalM = useMutation(api.goals.update);
-  const toggleDoneM = useMutation(api.goals.toggleDone);
-  const toggleSlippedM = useMutation(api.goals.toggleSlipped);
+  const resolveGoalM = useMutation(api.goals.resolve);
+  const unresolveGoalM = useMutation(api.goals.unresolve);
   const removeGoalM = useMutation(api.goals.remove);
 
   const [addGoalOpen, setAddGoalOpen] = useState(false);
@@ -73,6 +73,7 @@ export function GoalsScreen() {
         id: l._id,
         title: l.title,
         description: l.description,
+        notes: l.notes ?? null,
         status: l.endedAt === null ? 'active' : 'archived',
       };
     }
@@ -86,9 +87,10 @@ export function GoalsScreen() {
       title: g.title,
       type: g.type,
       longTermGoalId: g.longTermGoalId,
-      state: g.state,
-      notes: g.notes,
-      endDate: g.endDate ?? null,
+      description: g.description ?? null,
+      notes: g.notes ?? null,
+      targetDate: g.targetDate ?? null,
+      resolvedAt: g.resolvedAt ?? null,
     }));
   }, [goalsRaw]);
 
@@ -111,26 +113,32 @@ export function GoalsScreen() {
   const handleToggleGoal = (gid) => {
     const g = goals.find(x => x.id === gid);
     if (!g) return;
-    if (g.type === 'achievement') toggleDoneM({ id: gid });
-    else toggleSlippedM({ id: gid });
+    if (g.resolvedAt != null) {
+      // Already resolved — reopen.
+      unresolveGoalM({ id: gid });
+    } else {
+      // Resolve. For achievements this marks complete; for avoidances, slipped.
+      resolveGoalM({ id: gid });
+    }
   };
   const handleAddGoal = (g) => createGoal({
     title: g.title,
     type: g.type,
     longTermGoalId: g.longTermGoalId || null,
-    notes: g.notes || null,
-    endDate: g.endDate || null,
+    description: g.description ?? null,
+    targetDate: g.targetDate ?? null,
   });
   const handleUpdateGoal = (gid, updates) => updateGoalM({
     id: gid,
     title: updates.title,
     longTermGoalId: updates.longTermGoalId,
+    description: updates.description,
     notes: updates.notes,
-    endDate: updates.endDate,
+    targetDate: updates.targetDate,
   });
   const handleDeleteGoal = (gid) => removeGoalM({ id: gid });
   const handleAddLtg = async (title, description = '') => {
-    const id = await createLtg({ title, description });
+    const id = await createLtg({ title, description, notes: null });
     return { id, title, description, status: 'active' };
   };
   const handleUpdateLtg = (id, updates) => {

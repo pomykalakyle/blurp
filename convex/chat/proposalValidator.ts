@@ -6,27 +6,31 @@ export const proposalValidator = v.union(
     title: v.string(),
     type: v.union(v.literal("achievement"), v.literal("avoidance")),
     longTermGoalId: v.union(v.id("longTermGoals"), v.null()),
-    endDate: v.union(v.string(), v.null()),
-    notes: v.union(v.string(), v.null()),
+    description: v.union(v.string(), v.null()),
+    targetDate: v.union(v.string(), v.null()),
   }),
   v.object({
     kind: v.literal("createLtg"),
     title: v.string(),
     description: v.string(),
+    notes: v.union(v.string(), v.null()),
   }),
   v.object({
     kind: v.literal("editGoal"),
     goalId: v.id("goals"),
     title: v.optional(v.string()),
     longTermGoalId: v.optional(v.union(v.id("longTermGoals"), v.null())),
-    endDate: v.optional(v.union(v.string(), v.null())),
+    description: v.optional(v.union(v.string(), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
+    targetDate: v.optional(v.union(v.string(), v.null())),
+    resolvedAt: v.optional(v.union(v.number(), v.null())),
   }),
   v.object({
     kind: v.literal("editLtg"),
     ltgId: v.id("longTermGoals"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
+    notes: v.optional(v.union(v.string(), v.null())),
   }),
   v.object({
     kind: v.literal("archiveLtg"),
@@ -41,12 +45,15 @@ export const proposalValidator = v.union(
     ltgId: v.id("longTermGoals"),
   }),
   v.object({
-    kind: v.literal("toggleGoalState"),
+    kind: v.literal("resolveGoal"),
     goalId: v.id("goals"),
-    targetState: v.union(
-      v.object({ done: v.boolean() }),
-      v.object({ slipped: v.boolean() }),
-    ),
+    // Resolution timestamp (ms epoch). For achievements this means
+    // "completed at"; for avoidances "slipped at". The accepting code may
+    // use Date.now() when the proposal is accepted instead of this value,
+    // but we record it for transparency.
+    resolvedAt: v.number(),
+    // Optional notes to append to the goal's running `notes` field.
+    notesAppend: v.union(v.string(), v.null()),
   }),
   v.object({
     kind: v.literal("createEntry"),

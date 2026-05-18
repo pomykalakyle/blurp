@@ -18,6 +18,7 @@ import type * as chat_public from "../chat/public.js";
 import type * as chat_tools from "../chat/tools.js";
 import type * as goals from "../goals.js";
 import type * as longTermGoals from "../longTermGoals.js";
+import type * as migrations from "../migrations.js";
 import type * as narrativeEntries from "../narrativeEntries.js";
 import type * as ping from "../ping.js";
 
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   "chat/tools": typeof chat_tools;
   goals: typeof goals;
   longTermGoals: typeof longTermGoals;
+  migrations: typeof migrations;
   narrativeEntries: typeof narrativeEntries;
   ping: typeof ping;
 }>;
