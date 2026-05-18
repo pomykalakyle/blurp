@@ -1,5 +1,10 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "../_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "../_generated/server";
 import { Doc } from "../_generated/dataModel";
 import { proposalValidator } from "./proposalValidator";
 
@@ -27,6 +32,18 @@ export const listForThread = query({
     return await ctx.db
       .query("proposalCards")
       .withIndex("by_thread_status", (q) => q.eq("threadId", args.threadId))
+      .collect();
+  },
+});
+
+export const listByPromptMessage = internalQuery({
+  args: { promptMessageId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("proposalCards")
+      .withIndex("by_prompt_message", (q) =>
+        q.eq("promptMessageId", args.promptMessageId),
+      )
       .collect();
   },
 });
