@@ -33,6 +33,14 @@ export const proposalValidator = v.union(
     ltgId: v.id("longTermGoals"),
   }),
   v.object({
+    kind: v.literal("deleteGoal"),
+    goalId: v.id("goals"),
+  }),
+  v.object({
+    kind: v.literal("deleteLtg"),
+    ltgId: v.id("longTermGoals"),
+  }),
+  v.object({
     kind: v.literal("toggleGoalState"),
     goalId: v.id("goals"),
     targetState: v.union(

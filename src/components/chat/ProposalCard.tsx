@@ -76,6 +76,20 @@ function summarize(
         body: `"${ltg?.title ?? "(unknown LTG)"}"`,
       };
     }
+    case "deleteGoal": {
+      const goal = goals.find((g) => g._id === proposal.goalId);
+      return {
+        kindLabel: "Delete weekly goal",
+        body: `"${goal?.title ?? "(unknown goal)"}"`,
+      };
+    }
+    case "deleteLtg": {
+      const ltg = ltgs.find((l) => l._id === proposal.ltgId);
+      return {
+        kindLabel: "Delete long-term goal",
+        body: `"${ltg?.title ?? "(unknown LTG)"}"`,
+      };
+    }
     case "toggleGoalState": {
       const goal = goals.find((g) => g._id === proposal.goalId);
       const targetState = proposal.targetState;

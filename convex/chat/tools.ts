@@ -174,6 +174,24 @@ export const proposeArchiveLtg = makeProposeTool({
   toProposal: (input) => ({ kind: "archiveLtg", ltgId: input.ltgId }),
 });
 
+export const proposeDeleteGoal = makeProposeTool({
+  description:
+    "Propose permanently deleting a weekly goal from Kyle's database. Use only when Kyle explicitly wants the goal gone (e.g. 'delete it', 'remove it', 'clear it out'). For finishing a goal that ran its course, prefer propose_toggle_goal_state to mark it done. Surfaces as a card.",
+  inputSchema: z.object({
+    goalId: z.string().describe("Convex ID of the weekly goal to delete."),
+  }),
+  toProposal: (input) => ({ kind: "deleteGoal", goalId: input.goalId }),
+});
+
+export const proposeDeleteLtg = makeProposeTool({
+  description:
+    "Propose permanently deleting a long-term goal from Kyle's database. Any child weekly goals will have their parent reference cleared but will not themselves be deleted. Use only when Kyle explicitly wants the LTG gone; for outgrowing or wrapping one up, prefer propose_archive_ltg. Surfaces as a card.",
+  inputSchema: z.object({
+    ltgId: z.string().describe("Convex ID of the long-term goal to delete."),
+  }),
+  toProposal: (input) => ({ kind: "deleteLtg", ltgId: input.ltgId }),
+});
+
 export const proposeToggleGoalState = makeProposeTool({
   description:
     "Propose toggling a goal's state — marking an achievement as done, or flagging an avoidance as slipped. Surfaces as a card.",

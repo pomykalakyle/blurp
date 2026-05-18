@@ -118,6 +118,27 @@ async function applyProposal(
       await ctx.db.patch(p.ltgId, { endedAt: Date.now() });
       return { applied: true };
     }
+    case "deleteGoal": {
+      const target = await ctx.db.get(p.goalId);
+      if (!target) return { applied: false, staleReason: "goal no longer exists" };
+      await ctx.db.delete(p.goalId);
+      return { applied: true };
+    }
+    case "deleteLtg": {
+      const target = await ctx.db.get(p.ltgId);
+      if (!target) return { applied: false, staleReason: "long-term goal no longer exists" };
+      // Orphan child weekly goals so they don't end up with a dangling
+      // parent reference.
+      const children = await ctx.db
+        .query("goals")
+        .withIndex("by_longTermGoal", (q) => q.eq("longTermGoalId", p.ltgId))
+        .collect();
+      for (const child of children) {
+        await ctx.db.patch(child._id, { longTermGoalId: null });
+      }
+      await ctx.db.delete(p.ltgId);
+      return { applied: true };
+    }
     case "toggleGoalState": {
       const target = await ctx.db.get(p.goalId);
       if (!target) return { applied: false, staleReason: "goal no longer exists" };

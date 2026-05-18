@@ -10,6 +10,7 @@
 
 import type * as chat_agent from "../chat/agent.js";
 import type * as chat_constants from "../chat/constants.js";
+import type * as chat_dates from "../chat/dates.js";
 import type * as chat_lookups from "../chat/lookups.js";
 import type * as chat_proposalValidator from "../chat/proposalValidator.js";
 import type * as chat_proposals from "../chat/proposals.js";
@@ -29,6 +30,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   "chat/agent": typeof chat_agent;
   "chat/constants": typeof chat_constants;
+  "chat/dates": typeof chat_dates;
   "chat/lookups": typeof chat_lookups;
   "chat/proposalValidator": typeof chat_proposalValidator;
   "chat/proposals": typeof chat_proposals;
