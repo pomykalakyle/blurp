@@ -78,7 +78,7 @@ function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse, onToggleG
   );
 }
 
-export function GoalsScreen({ onNewChat }) {
+export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
   const ltgsRaw = useQuery(api.longTermGoals.list);
   const goalsRaw = useQuery(api.goals.list);
   const createLtg = useMutation(api.longTermGoals.create);
