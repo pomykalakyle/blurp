@@ -31,6 +31,9 @@ export default defineSchema({
     // Running commentary on the long-term goal. Added 2026-05-18.
     notes: v.optional(v.union(v.string(), v.null())),
     endedAt: v.union(v.number(), v.null()),
+    // User-defined sort order. Smaller = earlier. Items without a value
+    // fall back to `_creationTime` so existing rows continue to work.
+    order: v.optional(v.number()),
   }).index("by_endedAt", ["endedAt"]),
 
   goals: defineTable({

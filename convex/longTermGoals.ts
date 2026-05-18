@@ -8,6 +8,7 @@ const ltgDoc = v.object({
   description: v.string(),
   notes: v.optional(v.union(v.string(), v.null())),
   endedAt: v.union(v.number(), v.null()),
+  order: v.optional(v.number()),
 });
 
 export const list = query({
@@ -26,12 +27,34 @@ export const create = mutation({
   },
   returns: v.id("longTermGoals"),
   handler: async (ctx, args) => {
+    const existing = await ctx.db.query("longTermGoals").collect();
+    const maxOrder = existing.reduce((m, l) => {
+      const o = l.order ?? l._creationTime;
+      return o > m ? o : m;
+    }, 0);
     return await ctx.db.insert("longTermGoals", {
       title: args.title,
       description: args.description,
       notes: args.notes ?? null,
       endedAt: null,
+      order: maxOrder + 1000,
     });
+  },
+});
+
+// Reorder active long-term goals. Accepts an array of LTG IDs in the
+// desired order; assigns sequential `order` values (1000, 2000, ...).
+// Archived LTGs are not affected.
+export const reorder = mutation({
+  args: { ids: v.array(v.id("longTermGoals")) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    let next = 1000;
+    for (const id of args.ids) {
+      await ctx.db.patch(id, { order: next });
+      next += 1000;
+    }
+    return null;
   },
 });
 

@@ -28,7 +28,7 @@ function PortalMenu({ open, anchorRef, onClose, children }) {
   );
 }
 
-export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg, renderGoal }) {
+export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg, onUnarchiveLtg, renderGoal, dragHandle = null, dimmed = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(ltg.title);
@@ -36,8 +36,9 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
   const successCount = goals.filter(isGoalSuccess).length;
 
   return (
-    <div className="border border-soft rounded-lg overflow-hidden">
+    <div className={`border border-soft rounded-lg overflow-hidden ${dimmed ? 'opacity-60' : ''}`}>
       <div className="flex items-center justify-between px-4 py-3 bg-surface-soft border-b border-soft">
+        {dragHandle}
         <button onClick={onToggleCollapse} className="flex items-center gap-2 flex-1 text-left group">
           {collapsed ? <ChevronRight size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
           {renaming ? (
@@ -61,9 +62,15 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
             <button onClick={() => { setRenaming(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
               <Edit2 size={14} /> Rename
             </button>
-            <button onClick={() => { onArchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
-              <Archive size={14} /> Archive
-            </button>
+            {onUnarchiveLtg ? (
+              <button onClick={() => { onUnarchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+                <Archive size={14} /> Unarchive
+              </button>
+            ) : (
+              <button onClick={() => { onArchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+                <Archive size={14} /> Archive
+              </button>
+            )}
           </PortalMenu>
         </div>
       </div>
