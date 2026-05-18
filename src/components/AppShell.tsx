@@ -21,10 +21,10 @@ const SECTION_LABELS: Record<Section, string> = {
 };
 
 const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
-  { id: "goals", icon: Target },
+  { id: "checkIn", icon: ClipboardCheck },
   { id: "chat", icon: MessageSquare },
   { id: "narrative", icon: BookOpen },
-  { id: "checkIn", icon: ClipboardCheck },
+  { id: "goals", icon: Target },
 ];
 
 type Props = {
