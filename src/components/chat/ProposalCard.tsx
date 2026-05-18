@@ -26,7 +26,7 @@ function summarize(
         .filter(Boolean)
         .join(" · ");
       return {
-        kindLabel: "Add weekly goal",
+        kindLabel: "Add goal",
         body: `"${proposal.title}"${meta ? ` — ${meta}` : ""}${
           proposal.notes ? `\nNote: ${proposal.notes}` : ""
         }`,
@@ -54,7 +54,7 @@ function summarize(
       if (proposal.notes !== undefined)
         changes.push(`notes → ${proposal.notes ? `"${proposal.notes}"` : "none"}`);
       return {
-        kindLabel: "Edit weekly goal",
+        kindLabel: "Edit goal",
         body: `"${goal?.title ?? "(unknown goal)"}"\n${changes.join("\n")}`,
       };
     }
@@ -79,7 +79,7 @@ function summarize(
     case "deleteGoal": {
       const goal = goals.find((g) => g._id === proposal.goalId);
       return {
-        kindLabel: "Delete weekly goal",
+        kindLabel: "Delete goal",
         body: `"${goal?.title ?? "(unknown goal)"}"`,
       };
     }
