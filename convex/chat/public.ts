@@ -430,6 +430,47 @@ export const openCheckInChat = internalAction({
   },
 });
 
+export const backfillMissingTitles = internalAction({
+  args: {},
+  returns: v.object({ scanned: v.number(), titled: v.number() }),
+  handler: async (ctx) => {
+    const result = await ctx.runQuery(
+      components.agent.threads.listThreadsByUserId,
+      {
+        userId: USER_ID,
+        order: "desc",
+        paginationOpts: { cursor: null, numItems: 500 },
+      },
+    );
+    const missing = result.page.filter(
+      (t) => !t.title || t.title.length === 0,
+    );
+    console.log("[title-backfill] scanned", {
+      total: result.page.length,
+      missing: missing.length,
+    });
+    let titled = 0;
+    for (const t of missing) {
+      try {
+        await ctx.runAction(internal.chat.public.maybeGenerateTitle, {
+          threadId: t._id,
+        });
+        const refreshed = await ctx.runQuery(
+          components.agent.threads.getThread,
+          { threadId: t._id },
+        );
+        if (refreshed?.title && refreshed.title.length > 0) titled += 1;
+      } catch (err) {
+        console.error("[title-backfill] thread failed", {
+          threadId: t._id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return { scanned: missing.length, titled };
+  },
+});
+
 export const maybeGenerateTitle = internalAction({
   args: { threadId: v.string() },
   returns: v.null(),
