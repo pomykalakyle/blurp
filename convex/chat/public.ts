@@ -451,31 +451,64 @@ export const maybeGenerateTitle = internalAction({
     );
 
     const firstUser = messagesResult.page.find((m) => m.message?.role === "user");
+    if (!firstUser) {
+      console.log("[title] skip: no user message yet", { threadId: args.threadId });
+      return null;
+    }
+
+    const userText = extractText(firstUser.message?.content);
+    if (!userText) {
+      console.log("[title] skip: user message has no text", {
+        threadId: args.threadId,
+      });
+      return null;
+    }
+
     const firstAssistant = messagesResult.page.find(
       (m) => m.message?.role === "assistant",
     );
-    if (!firstUser || !firstAssistant) return null;
+    const assistantText = firstAssistant
+      ? extractText(firstAssistant.message?.content)
+      : "";
 
-    const userText = extractText(firstUser.message?.content);
-    const assistantText = extractText(firstAssistant.message?.content);
-    if (!userText || !assistantText) return null;
-
-    const titlePrompt = `You are titling a chat conversation. Read the first exchange below and produce a concise title of 3 to 6 words. Return ONLY the title, no quotes, no punctuation at the end.
+    const titlePrompt = assistantText
+      ? `You are titling a chat conversation. Read the first exchange below and produce a concise title of 3 to 6 words. Return ONLY the title, no quotes, no punctuation at the end.
 
 User: ${userText.slice(0, 400)}
-Assistant: ${assistantText.slice(0, 400)}`;
+Assistant: ${assistantText.slice(0, 400)}`
+      : `You are titling a chat conversation. Read the user's opening message below and produce a concise title of 3 to 6 words. Return ONLY the title, no quotes, no punctuation at the end.
 
-    const { text } = await generateText({
-      model: gateway(TITLE_MODEL),
-      prompt: titlePrompt,
-    });
+User: ${userText.slice(0, 400)}`;
+
+    let text: string;
+    try {
+      const result = await generateText({
+        model: gateway(TITLE_MODEL),
+        prompt: titlePrompt,
+      });
+      text = result.text;
+    } catch (err) {
+      console.error("[title] generateText failed", {
+        threadId: args.threadId,
+        model: TITLE_MODEL,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    }
+
     const title = text.trim().replace(/^["']|["']$/g, "").slice(0, 80);
-    if (!title) return null;
+    if (!title) {
+      console.log("[title] skip: empty title from model", {
+        threadId: args.threadId,
+      });
+      return null;
+    }
 
     await updateThreadMetadata(ctx, components.agent, {
       threadId: args.threadId,
       patch: { title },
     });
+    console.log("[title] set", { threadId: args.threadId, title });
     return null;
   },
 });
