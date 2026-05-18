@@ -32,3 +32,11 @@ Thumbs.db
 .vercel
 .convex
 coverage
+
+# Claude Code local state (sub-agent worktrees, plugin config)
+.claude/
+
+# Convex AI skills installed via `npx convex ai-files install` —
+# regenerable locally, not project source.
+.agents/
+skills-lock.json
