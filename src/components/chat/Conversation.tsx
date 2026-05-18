@@ -134,7 +134,7 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
                 if (e.key === "Escape") setRenaming(false);
               }}
               onBlur={handleRename}
-              className="flex-1 bg-surface-2 text-cream text-sm px-3 py-1.5 rounded outline-none border border-default"
+              className="flex-1 bg-surface-2 text-cream text-base md:text-sm px-3 py-1.5 rounded outline-none border border-default"
             />
           ) : (
             <>

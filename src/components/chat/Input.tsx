@@ -46,7 +46,7 @@ export function Input({ disabled, sending, onSend, placeholder }: Props) {
           placeholder={placeholder ?? "Message Claude…"}
           style={{ overflow: "hidden", resize: "none" }}
           className="
-            flex-1 rounded-2xl bg-surface-2 text-cream text-sm
+            flex-1 rounded-2xl bg-surface-2 text-cream text-base md:text-sm
             px-4 py-3 outline-none border border-default focus-border-accent
             placeholder-faint
           "
