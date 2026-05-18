@@ -53,8 +53,15 @@ export function daysOpenSince(startDateStr) {
 
 export function isWeekendReady(startDateStr) { return daysOpenSince(startDateStr) >= 5; }
 
+// Outcome is derived from goal type + resolvedAt:
+//   achievement + resolvedAt set → success (completed)
+//   achievement + resolvedAt null → not yet success (still open)
+//   avoidance   + resolvedAt set → failure (slipped — resolvedAt records when)
+//   avoidance   + resolvedAt null → success (still clean)
 export function isGoalSuccess(g) {
-  if (g.type === 'achievement') return !!g.state?.done;
-  return !g.state?.slipped;
+  const resolved = g.resolvedAt != null;
+  if (g.type === 'achievement') return resolved;
+  return !resolved;
 }
 export function isGoalFail(g) { return !isGoalSuccess(g); }
+export function isGoalResolved(g) { return g.resolvedAt != null; }

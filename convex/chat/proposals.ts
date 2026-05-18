@@ -82,6 +82,11 @@ export const dismiss = mutation({
 
 type CardDoc = Doc<"proposalCards">;
 
+function appendNote(existing: string | null | undefined, append: string): string {
+  const e = (existing ?? "").trim();
+  return e ? `${e}\n\n${append}` : append;
+}
+
 async function applyProposal(
   ctx: { db: import("../_generated/server").MutationCtx["db"] },
   card: CardDoc,
@@ -93,10 +98,10 @@ async function applyProposal(
         title: p.title,
         type: p.type,
         longTermGoalId: p.longTermGoalId,
-        notes: p.notes,
-        endDate: p.endDate,
-        state: p.type === "achievement" ? { done: false } : { slipped: false },
-        endedAt: null,
+        description: p.description,
+        notes: null,
+        targetDate: p.targetDate,
+        resolvedAt: null,
       });
       return { applied: true };
     }
@@ -104,6 +109,7 @@ async function applyProposal(
       await ctx.db.insert("longTermGoals", {
         title: p.title,
         description: p.description,
+        notes: p.notes,
         endedAt: null,
       });
       return { applied: true };
@@ -114,8 +120,10 @@ async function applyProposal(
       const patch: Record<string, unknown> = {};
       if (p.title !== undefined) patch.title = p.title;
       if (p.longTermGoalId !== undefined) patch.longTermGoalId = p.longTermGoalId;
-      if (p.endDate !== undefined) patch.endDate = p.endDate;
+      if (p.description !== undefined) patch.description = p.description;
       if (p.notes !== undefined) patch.notes = p.notes;
+      if (p.targetDate !== undefined) patch.targetDate = p.targetDate;
+      if (p.resolvedAt !== undefined) patch.resolvedAt = p.resolvedAt;
       await ctx.db.patch(p.goalId, patch);
       return { applied: true };
     }
@@ -125,6 +133,7 @@ async function applyProposal(
       const patch: Record<string, unknown> = {};
       if (p.title !== undefined) patch.title = p.title;
       if (p.description !== undefined) patch.description = p.description;
+      if (p.notes !== undefined) patch.notes = p.notes;
       await ctx.db.patch(p.ltgId, patch);
       return { applied: true };
     }
@@ -144,8 +153,7 @@ async function applyProposal(
     case "deleteLtg": {
       const target = await ctx.db.get(p.ltgId);
       if (!target) return { applied: false, staleReason: "long-term goal no longer exists" };
-      // Orphan child weekly goals so they don't end up with a dangling
-      // parent reference.
+      // Orphan child goals so they don't end up with a dangling parent reference.
       const children = await ctx.db
         .query("goals")
         .withIndex("by_longTermGoal", (q) => q.eq("longTermGoalId", p.ltgId))
@@ -156,20 +164,18 @@ async function applyProposal(
       await ctx.db.delete(p.ltgId);
       return { applied: true };
     }
-    case "toggleGoalState": {
+    case "resolveGoal": {
       const target = await ctx.db.get(p.goalId);
       if (!target) return { applied: false, staleReason: "goal no longer exists" };
-      const targetState = p.targetState;
-      if ("done" in targetState && target.state.done === targetState.done) {
-        return { applied: false, staleReason: "goal already in that state" };
+      if ((target.resolvedAt ?? null) !== null) {
+        return { applied: false, staleReason: "goal already resolved" };
       }
-      if ("slipped" in targetState && target.state.slipped === targetState.slipped) {
-        return { applied: false, staleReason: "goal already in that state" };
-      }
+      const nextNotes = p.notesAppend
+        ? appendNote(target.notes ?? null, p.notesAppend)
+        : target.notes ?? null;
       await ctx.db.patch(p.goalId, {
-        state: "done" in targetState
-          ? { done: targetState.done }
-          : { slipped: targetState.slipped },
+        resolvedAt: p.resolvedAt,
+        notes: nextNotes,
       });
       return { applied: true };
     }

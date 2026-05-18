@@ -129,11 +129,11 @@ export function AddGoalModal({ open, onClose, ltgs, onAdd, onAddLtg }) {
   const [ltgId, setLtgId] = useState('');
   const [newLtgTitle, setNewLtgTitle] = useState('');
   const [creatingLtg, setCreatingLtg] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [description, setDescription] = useState('');
+  const [targetDate, setTargetDate] = useState('');
 
   useEffect(() => {
-    if (open) { setTitle(''); setType('achievement'); setLtgId(''); setNewLtgTitle(''); setCreatingLtg(false); setNotes(''); setEndDate(''); }
+    if (open) { setTitle(''); setType('achievement'); setLtgId(''); setNewLtgTitle(''); setCreatingLtg(false); setDescription(''); setTargetDate(''); }
   }, [open]);
 
   const submit = async () => {
@@ -143,14 +143,20 @@ export function AddGoalModal({ open, onClose, ltgs, onAdd, onAddLtg }) {
       const ltg = await onAddLtg(newLtgTitle.trim());
       useLtgId = ltg.id;
     }
-    onAdd({ title: title.trim(), type, longTermGoalId: useLtgId, notes: notes.trim() || null, endDate: endDate || null });
+    onAdd({
+      title: title.trim(),
+      type,
+      longTermGoalId: useLtgId,
+      description: description.trim() || null,
+      targetDate: targetDate || null,
+    });
     onClose();
   };
 
   const inputCls = "w-full bg-base border border-default rounded-md px-3 py-2 text-cream placeholder-faint outline-none focus-border-accent";
 
   return (
-    <Modal open={open} onClose={onClose} title="New weekly goal">
+    <Modal open={open} onClose={onClose} title="New goal">
       <div className="space-y-4">
         <div>
           <label className="block text-xs uppercase tracking-widest text-muted mb-2">Goal</label>
@@ -164,12 +170,12 @@ export function AddGoalModal({ open, onClose, ltgs, onAdd, onAddLtg }) {
             <button type="button" onClick={() => setType('achievement')}
               className={`px-3 py-2 rounded-md text-sm text-left border transition-colors ${type === 'achievement' ? 'border-accent bg-accent-tint text-cream' : 'border-default text-muted hover-bg-surface-soft'}`}>
               <div className="font-medium">Achievement</div>
-              <div className="text-xs text-muted mt-0.5">Do X this week</div>
+              <div className="text-xs text-muted mt-0.5">Do X by the target date</div>
             </button>
             <button type="button" onClick={() => setType('avoidance')}
               className={`px-3 py-2 rounded-md text-sm text-left border transition-colors ${type === 'avoidance' ? 'border-accent bg-accent-tint text-cream' : 'border-default text-muted hover-bg-surface-soft'}`}>
               <div className="font-medium">Avoidance</div>
-              <div className="text-xs text-muted mt-0.5">Don't do X this week</div>
+              <div className="text-xs text-muted mt-0.5">Don't do X through the target</div>
             </button>
           </div>
         </div>
@@ -195,13 +201,14 @@ export function AddGoalModal({ open, onClose, ltgs, onAdd, onAddLtg }) {
           )}
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-widest text-muted mb-2">Note (optional)</label>
-          <input value={notes} onChange={(e) => setNotes(e.target.value)}
-            placeholder="Context, why, how..." className={inputCls} />
+          <label className="block text-xs uppercase tracking-widest text-muted mb-2">Description (optional)</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+            placeholder="What this goal is about — scoping, context, why..." rows={2}
+            className={`${inputCls} resize-none`} />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-widest text-muted mb-2">End date (optional)</label>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
+          <label className="block text-xs uppercase tracking-widest text-muted mb-2">Target date (optional)</label>
+          <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className={inputCls} />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -244,15 +251,28 @@ export function AddLtgModal({ open, onClose, onAdd }) {
 export function EditGoalModal({ open, goal, ltgs, onClose, onSave }) {
   const [title, setTitle] = useState('');
   const [ltgId, setLtgId] = useState('');
+  const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [targetDate, setTargetDate] = useState('');
   useEffect(() => {
-    if (open && goal) { setTitle(goal.title); setLtgId(goal.longTermGoalId || ''); setNotes(goal.notes || ''); setEndDate(goal.endDate || ''); }
+    if (open && goal) {
+      setTitle(goal.title);
+      setLtgId(goal.longTermGoalId || '');
+      setDescription(goal.description || '');
+      setNotes(goal.notes || '');
+      setTargetDate(goal.targetDate || '');
+    }
   }, [open, goal]);
   if (!goal) return null;
   const submit = () => {
     if (!title.trim()) return;
-    onSave({ title: title.trim(), longTermGoalId: ltgId || null, notes: notes.trim() || null, endDate: endDate || null });
+    onSave({
+      title: title.trim(),
+      longTermGoalId: ltgId || null,
+      description: description.trim() || null,
+      notes: notes.trim() || null,
+      targetDate: targetDate || null,
+    });
   };
   const inputCls = "w-full bg-base border border-default rounded-md px-3 py-2 text-cream outline-none focus-border-accent";
   return (
@@ -270,12 +290,20 @@ export function EditGoalModal({ open, goal, ltgs, onClose, onSave }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-widest text-muted mb-2">Note</label>
-          <input value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} />
+          <label className="block text-xs uppercase tracking-widest text-muted mb-2">Description</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+            placeholder="What this goal is about" rows={2}
+            className={`${inputCls} resize-none`} />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-widest text-muted mb-2">End date (optional)</label>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
+          <label className="block text-xs uppercase tracking-widest text-muted mb-2">Notes</label>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="Running commentary — added as the goal progresses" rows={3}
+            className={`${inputCls} resize-none`} />
+        </div>
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-muted mb-2">Target date (optional)</label>
+          <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className={inputCls} />
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -285,3 +313,4 @@ export function EditGoalModal({ open, goal, ltgs, onClose, onSave }) {
     </Modal>
   );
 }
+

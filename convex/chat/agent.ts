@@ -4,7 +4,7 @@ import { components } from "../_generated/api";
 import { ABOUT_KYLE_SYSTEM, CHAT_MODEL } from "./constants";
 import {
   lookupArchivedLtgs,
-  lookupEndedGoals,
+  lookupResolvedGoals,
   proposeArchiveLtg,
   proposeCreateEntry,
   proposeCreateGoal,
@@ -14,7 +14,7 @@ import {
   proposeEditEntry,
   proposeEditGoal,
   proposeEditLtg,
-  proposeToggleGoalState,
+  proposeResolveGoal,
 } from "./tools";
 
 export const chatAgent: Agent = new Agent(components.agent, {
@@ -28,7 +28,7 @@ export const chatAgent: Agent = new Agent(components.agent, {
   stopWhen: stepCountIs(10),
   tools: {
     lookup_archived_ltgs: lookupArchivedLtgs,
-    lookup_ended_goals: lookupEndedGoals,
+    lookup_resolved_goals: lookupResolvedGoals,
     propose_create_goal: proposeCreateGoal,
     propose_create_ltg: proposeCreateLtg,
     propose_edit_goal: proposeEditGoal,
@@ -36,7 +36,7 @@ export const chatAgent: Agent = new Agent(components.agent, {
     propose_archive_ltg: proposeArchiveLtg,
     propose_delete_goal: proposeDeleteGoal,
     propose_delete_ltg: proposeDeleteLtg,
-    propose_toggle_goal_state: proposeToggleGoalState,
+    propose_resolve_goal: proposeResolveGoal,
     propose_create_entry: proposeCreateEntry,
     propose_edit_entry: proposeEditEntry,
   },

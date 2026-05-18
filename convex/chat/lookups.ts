@@ -3,6 +3,7 @@ import { pacificDate } from "./dates";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CONTEXT_WINDOW_DAYS = 14;
+const RECENTLY_RESOLVED_DAYS = 7;
 
 export const listActiveLtgs = internalQuery({
   args: {},
@@ -14,13 +15,31 @@ export const listActiveLtgs = internalQuery({
   },
 });
 
-export const listCurrentGoals = internalQuery({
+// Open goals: not yet resolved. Used as the primary "current goals" list
+// in the chat system context and as the candidate set for check-in
+// opening prompts.
+export const listOpenGoals = internalQuery({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db
-      .query("goals")
-      .withIndex("by_endedAt", (q) => q.eq("endedAt", null))
-      .collect();
+    const all = await ctx.db.query("goals").collect();
+    return all.filter((g) => (g.resolvedAt ?? null) === null);
+  },
+});
+
+// Goals resolved within the last RECENTLY_RESOLVED_DAYS. Surfaced as a
+// secondary section in the chat system context so the assistant can
+// reference recent outcomes without re-proposing them.
+export const listRecentlyResolvedGoals = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - RECENTLY_RESOLVED_DAYS * DAY_MS;
+    const all = await ctx.db.query("goals").collect();
+    return all
+      .filter((g) => {
+        const r = g.resolvedAt ?? null;
+        return r !== null && r >= cutoff;
+      })
+      .sort((a, b) => (b.resolvedAt ?? 0) - (a.resolvedAt ?? 0));
   },
 });
 
