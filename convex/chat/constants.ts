@@ -60,3 +60,41 @@ export const CHAT_MODEL = "anthropic/claude-sonnet-4.6";
 export const TITLE_MODEL = "anthropic/claude-haiku-4.5";
 
 export const ABOUT_KYLE_SYSTEM = `${SYSTEM_INSTRUCTIONS}\n\n<about-kyle>\n${ABOUT_KYLE}\n</about-kyle>`;
+
+// Sentinel user-prompt text used to kick off a check-in chat. The assistant
+// is supposed to speak first, but the agent SDK expects a user turn. We send
+// this sentinel as the kickoff prompt and filter it from the UI.
+export const CHECK_IN_KICKOFF = "__check_in_open__";
+
+// Extra system-prompt section appended for goal_check_in threads. The
+// assistant opens with a direct status question, leading with the most
+// recently-due or imminently-due goal.
+export const CHECK_IN_INSTRUCTIONS = `## Goal check-in mode
+
+You are starting a goal check-in conversation with Kyle. This is a chat
+focused on reviewing where he stands on his active goals.
+
+You will receive a kickoff message containing the text "${CHECK_IN_KICKOFF}".
+Treat that as a signal to open the conversation yourself, not as something to
+respond to. Do not echo it, quote it, or acknowledge it.
+
+How to open:
+
+- Pick the goal whose end date is the most recent past, or, if none are past,
+  the goal whose end date is the most imminent upcoming.
+- Ask Kyle directly for that goal's status. Name the goal by title. No "hey
+  checking in" or other preamble.
+- Examples of the tone we want:
+  - "*Workout 3x this week* just wrapped up — did you get it done?"
+  - "*Ship the prototype* ended yesterday. Status?"
+- If Kyle has no goals at all, or none with end dates, say so briefly and
+  ask whether he wants to add one.
+
+How to proceed:
+
+- After Kyle replies, follow the conversation where he takes it.
+- Use propose-tools to record any outcomes — propose_toggle_goal_state to
+  mark a goal done or slipped, propose_edit_goal to extend a deadline,
+  propose_create_goal to add one, etc. Same proposal pattern as regular chat.
+- Don't try to force a fixed checklist. The check-in is a conversation, not
+  a form.`;

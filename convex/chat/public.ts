@@ -9,10 +9,21 @@ import {
 import { paginationOptsValidator } from "convex/server";
 import { gateway } from "@ai-sdk/gateway";
 import { generateText } from "ai";
-import { action, internalAction, mutation, query } from "../_generated/server";
+import {
+  action,
+  internalAction,
+  internalQuery,
+  mutation,
+  query,
+} from "../_generated/server";
 import { components, internal } from "../_generated/api";
 import { chatAgent } from "./agent";
-import { ABOUT_KYLE_SYSTEM, TITLE_MODEL } from "./constants";
+import {
+  ABOUT_KYLE_SYSTEM,
+  CHECK_IN_INSTRUCTIONS,
+  CHECK_IN_KICKOFF,
+  TITLE_MODEL,
+} from "./constants";
 import { pacificDate } from "./dates";
 import type { Doc } from "../_generated/dataModel";
 
@@ -26,6 +37,41 @@ export const createThread = mutation({
   },
 });
 
+export const createCheckInThread = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    const threadId = await agentCreateThread(ctx, components.agent, {
+      userId: USER_ID,
+    });
+    await ctx.db.insert("chatThreadMeta", {
+      threadId,
+      kind: "goal_check_in",
+    });
+    // Date-based default title so the list row has something readable before
+    // Kyle replies. Auto-titling is skipped for non-empty titles.
+    await updateThreadMetadata(ctx, components.agent, {
+      threadId,
+      patch: { title: `Check-in · ${pacificDate()}` },
+    });
+    // Kick off the assistant's opening message. Fire-and-forget so the UI
+    // can navigate to the chat immediately and the message streams in.
+    await ctx.scheduler.runAfter(0, internal.chat.public.openCheckInChat, {
+      threadId,
+    });
+    return threadId;
+  },
+});
+
+async function listCheckInThreadIds(
+  ctx: { db: import("../_generated/server").QueryCtx["db"] },
+): Promise<Set<string>> {
+  const metas = await ctx.db.query("chatThreadMeta").collect();
+  return new Set(
+    metas.filter((m) => m.kind === "goal_check_in").map((m) => m.threadId),
+  );
+}
+
 export const listThreads = query({
   args: {},
   handler: async (ctx) => {
@@ -33,7 +79,43 @@ export const listThreads = query({
       components.agent.threads.listThreadsByUserId,
       { userId: USER_ID, order: "desc" },
     );
-    return result.page;
+    const checkInIds = await listCheckInThreadIds(ctx);
+    return result.page.filter((t) => !checkInIds.has(t._id));
+  },
+});
+
+export const listCheckInThreads = query({
+  args: {},
+  handler: async (ctx) => {
+    const result = await ctx.runQuery(
+      components.agent.threads.listThreadsByUserId,
+      { userId: USER_ID, order: "desc" },
+    );
+    const checkInIds = await listCheckInThreadIds(ctx);
+    return result.page.filter((t) => checkInIds.has(t._id));
+  },
+});
+
+export const getThread = query({
+  args: { threadId: v.string() },
+  handler: async (ctx, args) => {
+    const thread = await ctx.runQuery(
+      components.agent.threads.getThread,
+      { threadId: args.threadId },
+    );
+    return thread;
+  },
+});
+
+export const getThreadKind = internalQuery({
+  args: { threadId: v.string() },
+  returns: v.union(v.literal("regular"), v.literal("goal_check_in")),
+  handler: async (ctx, args) => {
+    const meta = await ctx.db
+      .query("chatThreadMeta")
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .unique();
+    return meta?.kind ?? "regular";
   },
 });
 
@@ -157,7 +239,16 @@ export const sendMessage = action({
       threadId: args.threadId,
     });
 
-    const system = await buildDynamicContext(ctx);
+    const kind: "regular" | "goal_check_in" = await ctx.runQuery(
+      internal.chat.public.getThreadKind,
+      { threadId: args.threadId },
+    );
+
+    const baseSystem = await buildDynamicContext(ctx);
+    const system =
+      kind === "goal_check_in"
+        ? `${baseSystem}\n\n${CHECK_IN_INSTRUCTIONS}`
+        : baseSystem;
 
     const result = await chatAgent.streamText(
       ctx,
@@ -181,11 +272,40 @@ export const sendMessage = action({
     );
     await result.consumeStream();
 
-    // Auto-title after the first exchange, fire-and-forget.
+    // Auto-title after the first exchange, fire-and-forget. Skipped for
+    // check-in chats — they get a date-based title at creation that we let
+    // stand unless Kyle renames.
     await ctx.scheduler.runAfter(0, internal.chat.public.maybeGenerateTitle, {
       threadId: args.threadId,
     });
 
+    return null;
+  },
+});
+
+export const openCheckInChat = internalAction({
+  args: { threadId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const baseSystem = await buildDynamicContext(ctx);
+    const system = `${baseSystem}\n\n${CHECK_IN_INSTRUCTIONS}`;
+
+    const result = await chatAgent.streamText(
+      ctx,
+      { threadId: args.threadId },
+      {
+        prompt: CHECK_IN_KICKOFF,
+        system,
+        onStepFinish: (step) => {
+          console.log("[check-in open] step finished:", {
+            finishReason: step.finishReason,
+            textLength: step.text?.length ?? 0,
+          });
+        },
+      },
+      { saveStreamDeltas: { chunking: "word", throttleMs: 100 } },
+    );
+    await result.consumeStream();
     return null;
   },
 });
