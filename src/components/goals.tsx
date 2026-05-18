@@ -84,7 +84,7 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
   );
 }
 
-export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) {
+export function GoalRow({ goal, ltgLabel = null, onToggle, onEdit, onDelete, readOnly = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const goalMenuRef = useRef(null);
   const success = isGoalSuccess(goal);
@@ -107,6 +107,7 @@ export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) 
         <div className={`text-sm ${struck ? 'line-through' : ''}`} style={{ color: struck ? 'var(--c-text-faint)' : (success ? 'var(--c-text)' : 'var(--c-text-muted)') }}>
           {goal.title}
         </div>
+        {ltgLabel && <div className="text-xs text-faint mt-0.5 truncate">· {ltgLabel}</div>}
         {goal.description && <div className="text-xs text-muted mt-0.5">{goal.description}</div>}
         {goal.notes && <div className="text-xs text-faint mt-0.5 italic whitespace-pre-line">{goal.notes}</div>}
       </div>
@@ -115,9 +116,6 @@ export function GoalRow({ goal, onToggle, onEdit, onDelete, readOnly = false }) 
           {new Date(goal.targetDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
         </span>
       )}
-      <span className="text-[10px] uppercase tracking-widest text-faint">
-        {goal.type === 'avoidance' ? 'avoid' : ''}
-      </span>
       {!readOnly && (
         <div ref={goalMenuRef}>
           <IconButton onClick={() => setMenuOpen(v => !v)} title="Goal menu"><MoreHorizontal size={14} /></IconButton>
