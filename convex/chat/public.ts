@@ -13,6 +13,7 @@ import { action, internalAction, mutation, query } from "../_generated/server";
 import { components, internal } from "../_generated/api";
 import { chatAgent } from "./agent";
 import { ABOUT_KYLE_SYSTEM, TITLE_MODEL } from "./constants";
+import { pacificDate } from "./dates";
 import type { Doc } from "../_generated/dataModel";
 
 const USER_ID = "kyle";
@@ -83,7 +84,7 @@ async function buildDynamicContext(
     {},
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = pacificDate();
 
   const ltgLines = activeLtgs.length === 0
     ? "(none)"

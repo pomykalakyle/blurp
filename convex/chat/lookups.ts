@@ -1,4 +1,5 @@
 import { internalQuery } from "../_generated/server";
+import { pacificDate } from "./dates";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CONTEXT_WINDOW_DAYS = 14;
@@ -26,9 +27,9 @@ export const listCurrentGoals = internalQuery({
 export const listEntriesInContextWindow = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const cutoff = new Date(Date.now() - CONTEXT_WINDOW_DAYS * DAY_MS)
-      .toISOString()
-      .slice(0, 10);
+    const cutoff = pacificDate(
+      new Date(Date.now() - CONTEXT_WINDOW_DAYS * DAY_MS),
+    );
     const all = await ctx.db.query("narrativeEntries").collect();
     return all
       .filter((e) => e.endDate === null || e.endDate >= cutoff)
