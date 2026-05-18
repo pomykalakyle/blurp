@@ -9,7 +9,7 @@ import { CheckInScreen } from "./screens/CheckInScreen";
 import { api } from "../convex/_generated/api";
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState<Section>("checkIn");
+  const [activeSection, setActiveSection] = useState<Section>("goals");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [currentCheckInThreadId, setCurrentCheckInThreadId] = useState<
@@ -48,7 +48,9 @@ export default function App() {
         onNewChat={() => goToChat(null)}
         onNewCheckIn={handleNewCheckIn}
       >
-        {activeSection === "goals" && <GoalsScreen />}
+        {activeSection === "goals" && (
+          <GoalsScreen onNewChat={() => goToChat(null)} />
+        )}
         {activeSection === "chat" && (
           <ChatScreen
             threadId={currentThreadId}

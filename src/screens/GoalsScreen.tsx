@@ -78,7 +78,7 @@ function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse, onToggleG
   );
 }
 
-export function GoalsScreen() {
+export function GoalsScreen({ onNewChat }) {
   const ltgsRaw = useQuery(api.longTermGoals.list);
   const goalsRaw = useQuery(api.goals.list);
   const createLtg = useMutation(api.longTermGoals.create);
@@ -402,7 +402,7 @@ export function GoalsScreen() {
           <div className="snap-center shrink-0 w-full md:w-auto min-w-0">{paneB}</div>
         </div>
 
-        <button onClick={() => setAddGoalOpen(true)} aria-label="Add goal"
+        <button onClick={() => onNewChat?.()} aria-label="Start a new chat"
           className="fixed bottom-8 right-6 md:right-8 w-14 h-14 rounded-full fab-shadow transition-colors flex items-center justify-center z-20"
           style={{ backgroundColor: 'var(--c-accent)', color: 'var(--c-accent-text)' }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--c-accent-hover)'}
