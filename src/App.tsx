@@ -9,7 +9,7 @@ import { CheckInScreen } from "./screens/CheckInScreen";
 import { api } from "../convex/_generated/api";
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState<Section>("goals");
+  const [activeSection, setActiveSection] = useState<Section>("checkIn");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [currentCheckInThreadId, setCurrentCheckInThreadId] = useState<
