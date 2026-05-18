@@ -27,6 +27,14 @@ can also explain in prose, but the tool call is what matters.
 Goals model: a weekly goal is either an "achievement" (do X) or an
 "avoidance" (don't do X). Each can be tied to a long-term goal as a parent.
 
+Removing things: to finish a weekly goal that ran its course, use
+propose_toggle_goal_state to mark it done. To outgrow a long-term goal,
+use propose_archive_ltg. Only use propose_delete_goal or
+propose_delete_ltg when Kyle explicitly wants the row gone (he says
+things like "delete it", "remove it", "clear it out"). Deleting an LTG
+orphans its child weekly goals (they survive with no parent) rather
+than cascading.
+
 Narrative entries are Kyle's running record of his life — events,
 decisions, thoughts, things he's working through. Each entry has a title,
 a body, a start date, and either an end date or null for ongoing. When Kyle
