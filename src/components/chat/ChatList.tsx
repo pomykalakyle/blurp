@@ -52,12 +52,12 @@ export function ChatList({ currentThreadId, onSelect }: Props) {
           <li key={t._id}>
             <div
               className={`
-                group flex items-center gap-2 px-3 py-2 rounded-md text-sm cursor-pointer
+                group flex items-center gap-2 px-3 py-1 rounded-md text-sm cursor-pointer
                 transition-colors
                 ${
                   isActive
                     ? "bg-surface-2 text-cream"
-                    : "text-dim hover-bg-surface hover-text-cream"
+                    : "text-dim hover-bg-surface-2 hover-text-cream"
                 }
               `}
               onClick={() => !isRenaming && onSelect(t._id)}
@@ -96,7 +96,7 @@ export function ChatList({ currentThreadId, onSelect }: Props) {
                       e.stopPropagation();
                       startRename(t._id, t.title);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity icon-btn"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-faint hover-text-cream"
                     title="Rename"
                   >
                     <Edit2 size={12} />
