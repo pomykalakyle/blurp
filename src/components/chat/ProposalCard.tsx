@@ -121,6 +121,15 @@ function summarize(
         body: `"${goal?.title ?? "(unknown goal)"}" — ${when}${noteLine}`,
       };
     }
+    case "toggleGoalState": {
+      // Legacy historical kind. Should only render for old cards already
+      // accepted/dismissed; never for live ones.
+      const goal = goals.find((g) => g._id === proposal.goalId);
+      return {
+        kindLabel: "Update goal state",
+        body: `"${goal?.title ?? "(unknown goal)"}" (legacy)`,
+      };
+    }
     case "createEntry": {
       return {
         kindLabel: "Add narrative entry",

@@ -98,9 +98,11 @@ async function applyProposal(
         title: p.title,
         type: p.type,
         longTermGoalId: p.longTermGoalId,
-        description: p.description,
+        // Tolerate legacy proposal shape: fall back to the old `notes`
+        // field for description, and the old `endDate` for targetDate.
+        description: p.description ?? p.notes ?? null,
         notes: null,
-        targetDate: p.targetDate,
+        targetDate: p.targetDate ?? p.endDate ?? null,
         resolvedAt: null,
       });
       return { applied: true };
@@ -124,6 +126,11 @@ async function applyProposal(
       if (p.notes !== undefined) patch.notes = p.notes;
       if (p.targetDate !== undefined) patch.targetDate = p.targetDate;
       if (p.resolvedAt !== undefined) patch.resolvedAt = p.resolvedAt;
+      // Legacy field mapping (in case a historical editGoal card is
+      // somehow re-accepted): endDate → targetDate.
+      if (p.endDate !== undefined && p.targetDate === undefined) {
+        patch.targetDate = p.endDate;
+      }
       await ctx.db.patch(p.goalId, patch);
       return { applied: true };
     }
@@ -178,6 +185,17 @@ async function applyProposal(
         notes: nextNotes,
       });
       return { applied: true };
+    }
+    // Legacy: historical cards from before propose_toggle_goal_state was
+    // retired. No new code emits these, but if a live card from before
+    // the migration somehow lingers, mark it stale so the user sees a
+    // clear message rather than a crash.
+    case "toggleGoalState": {
+      return {
+        applied: false,
+        staleReason:
+          "this proposal predates the schema change — use resolve/edit instead",
+      };
     }
     case "createEntry": {
       await ctx.db.insert("narrativeEntries", {
