@@ -65,6 +65,9 @@ function summarizeProposal(card: ProposalCard): string {
       return `delete long-term goal ${p.ltgId}`;
     case "resolveGoal":
       return `resolve goal ${p.goalId}${p.notesAppend ? ` (note: ${p.notesAppend})` : ""}`;
+    case "toggleGoalState":
+      // Legacy historical kind; no new code emits this.
+      return `(legacy) toggle goal ${p.goalId} state`;
     case "createEntry":
       return `create narrative entry "${p.title}" (${p.startDate}${p.endDate ? `→${p.endDate}` : ", ongoing"})`;
     case "editEntry": {
