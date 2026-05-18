@@ -52,4 +52,13 @@ export default defineSchema({
   })
     .index("by_startDate", ["startDate"])
     .index("by_endDate", ["endDate"]),
+
+  // Sidecar metadata for chat threads owned by the @convex-dev/agent
+  // component. We can't attach fields directly to the component's thread
+  // records, so a row here keyed by threadId carries app-level info such
+  // as which kind of chat it is.
+  chatThreadMeta: defineTable({
+    threadId: v.string(),
+    kind: v.union(v.literal("regular"), v.literal("goal_check_in")),
+  }).index("by_threadId", ["threadId"]),
 });

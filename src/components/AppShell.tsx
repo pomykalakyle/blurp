@@ -1,20 +1,30 @@
 import { ReactNode } from "react";
-import { BookOpen, Menu, MessageSquare, Plus, Target, X } from "lucide-react";
+import {
+  BookOpen,
+  ClipboardCheck,
+  Menu,
+  MessageSquare,
+  Plus,
+  Target,
+  X,
+} from "lucide-react";
 import { FONT_DISPLAY } from "./ui";
 import { ChatList } from "./chat/ChatList";
 
-export type Section = "goals" | "chat" | "narrative";
+export type Section = "goals" | "chat" | "narrative" | "checkIn";
 
 const SECTION_LABELS: Record<Section, string> = {
   goals: "Goals",
   chat: "Chat",
   narrative: "Narrative",
+  checkIn: "Check-in",
 };
 
 const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
   { id: "goals", icon: Target },
   { id: "chat", icon: MessageSquare },
   { id: "narrative", icon: BookOpen },
+  { id: "checkIn", icon: ClipboardCheck },
 ];
 
 type Props = {
@@ -23,8 +33,11 @@ type Props = {
   drawerOpen: boolean;
   onSetDrawerOpen: (open: boolean) => void;
   currentThreadId: string | null;
+  currentCheckInThreadId: string | null;
   onSelectThread: (id: string | null) => void;
+  onSelectCheckInThread: (id: string | null) => void;
   onNewChat: () => void;
+  onNewCheckIn: () => void;
   children: ReactNode;
 };
 
@@ -35,8 +48,11 @@ export function AppShell(props: Props) {
     drawerOpen,
     onSetDrawerOpen,
     currentThreadId,
+    currentCheckInThreadId,
     onSelectThread,
+    onSelectCheckInThread,
     onNewChat,
+    onNewCheckIn,
     children,
   } = props;
 
@@ -121,6 +137,33 @@ export function AppShell(props: Props) {
                 currentThreadId={currentThreadId}
                 onSelect={(id) => {
                   onSelectThread(id);
+                  closeDrawer();
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {activeSection === "checkIn" && (
+          <div className="border-t border-soft mt-2 pt-3 flex-1 flex flex-col min-h-0">
+            <div className="px-3 mb-2">
+              <button
+                onClick={() => {
+                  onNewCheckIn();
+                  closeDrawer();
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-surface-2 text-cream hover-bg-surface-3"
+              >
+                <Plus size={14} /> New check-in
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-2 pb-3">
+              <ChatList
+                kind="checkIn"
+                currentThreadId={currentCheckInThreadId}
+                emptyText="No check-ins yet."
+                onSelect={(id) => {
+                  onSelectCheckInThread(id);
                   closeDrawer();
                 }}
               />

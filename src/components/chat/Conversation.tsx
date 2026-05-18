@@ -9,6 +9,11 @@ import { Input } from "./Input";
 import { TypingIndicator } from "./TypingIndicator";
 import { FONT_DISPLAY } from "../ui";
 
+// Mirror of CHECK_IN_KICKOFF in convex/chat/constants.ts. The backend sends
+// this sentinel as a user prompt to kick off check-in chats (the assistant
+// is supposed to speak first); we hide it from the UI.
+const CHECK_IN_KICKOFF_TEXT = "__check_in_open__";
+
 type Props = {
   threadId: string | null;
   onThreadCreated: (id: string) => void;
@@ -19,11 +24,10 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
   const sendMessage = useAction(api.chat.public.sendMessage);
   const renameThread = useMutation(api.chat.public.renameThread);
 
-  const thread = useQuery(
-    api.chat.public.listThreads,
-    threadId ? undefined : "skip",
+  const currentThread = useQuery(
+    api.chat.public.getThread,
+    threadId ? { threadId } : "skip",
   );
-  const currentThread = thread?.find((t) => t._id === threadId) ?? null;
 
   const cards = useQuery(
     api.chat.proposals.listForThread,
@@ -178,8 +182,15 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
             let lastUserId: string | undefined = undefined;
             return messages.map((m) => {
               const role = (m as { role?: string }).role;
+              const text = (m as { text?: string }).text ?? "";
               const id = (m as { id?: string }).id;
               if (role === "user" && id) lastUserId = id;
+              // Hide the sentinel kickoff message. It's how check-in chats
+              // are seeded server-side; Kyle shouldn't see it. Card mapping
+              // still works because lastUserId was updated above.
+              if (role === "user" && text === CHECK_IN_KICKOFF_TEXT) {
+                return null;
+              }
               const cardsForMessage =
                 role === "assistant" && lastUserId
                   ? cardsByPromptMessage.get(lastUserId) ?? []
