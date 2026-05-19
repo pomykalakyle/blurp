@@ -89,7 +89,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
   const createGoal = useMutation(api.goals.create);
   const updateGoalM = useMutation(api.goals.update);
   const resolveGoalM = useMutation(api.goals.resolve);
-  const unresolveGoalM = useMutation(api.goals.unresolve);
   const removeGoalM = useMutation(api.goals.remove);
 
   const [addGoalOpen, setAddGoalOpen] = useState(false);
@@ -204,7 +203,7 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
   const handleToggleGoal = (gid) => {
     const g = goals.find(x => x.id === gid);
     if (!g) return;
-    if (g.resolvedAt != null) unresolveGoalM({ id: gid });
+    if (g.resolvedAt != null) updateGoalM({ id: gid, resolvedAt: null });
     else resolveGoalM({ id: gid });
   };
   const handleAddGoal = (g) => createGoal({
