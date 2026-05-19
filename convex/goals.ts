@@ -1,9 +1,6 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
-// Returned goal shape. Includes the legacy fields as optional so existing
-// rows that haven't been migrated still pass the validator. Application
-// code should only read the new fields.
 const goalDoc = v.object({
   _id: v.id("goals"),
   _creationTime: v.number(),
@@ -14,15 +11,6 @@ const goalDoc = v.object({
   notes: v.optional(v.union(v.string(), v.null())),
   targetDate: v.optional(v.union(v.string(), v.null())),
   resolvedAt: v.optional(v.union(v.number(), v.null())),
-  // Legacy fields:
-  state: v.optional(
-    v.object({
-      done: v.optional(v.boolean()),
-      slipped: v.optional(v.boolean()),
-    }),
-  ),
-  endDate: v.optional(v.union(v.string(), v.null())),
-  endedAt: v.optional(v.union(v.number(), v.null())),
 });
 
 export const list = query({
