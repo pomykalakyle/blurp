@@ -63,7 +63,7 @@ export function AppShell(props: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-base text-cream flex">
+    <div className="h-dvh bg-base text-cream flex">
       {/* Mobile backdrop */}
       {drawerOpen && (
         <div
