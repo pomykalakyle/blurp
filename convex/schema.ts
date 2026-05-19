@@ -13,12 +13,6 @@ import { proposalValidator, proposalStatusValidator } from "./chat/proposalValid
 //     commentary appended over the goal's life.
 //   - `targetDate` is the target/deadline (nullable). `resolvedAt` is when
 //     it actually closed (can be before or after the target).
-//
-// The fields prefixed with `legacy_*` below are kept as optional during the
-// 2026-05-18 schema migration so existing rows validate. They are written
-// only by the migration internal mutations and are no longer read by any
-// application code. A follow-up commit will drop them once the migration
-// has run in prod.
 
 export default defineSchema({
   ping: defineTable({
@@ -40,26 +34,13 @@ export default defineSchema({
     longTermGoalId: v.union(v.id("longTermGoals"), v.null()),
     title: v.string(),
     type: v.union(v.literal("achievement"), v.literal("avoidance")),
-
-    // New shape (2026-05-18):
     description: v.optional(v.union(v.string(), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
     targetDate: v.optional(v.union(v.string(), v.null())),
     resolvedAt: v.optional(v.union(v.number(), v.null())),
-
-    // Legacy fields (transitional; cleared by migration):
-    state: v.optional(
-      v.object({
-        done: v.optional(v.boolean()),
-        slipped: v.optional(v.boolean()),
-      }),
-    ),
-    endDate: v.optional(v.union(v.string(), v.null())),
-    endedAt: v.optional(v.union(v.number(), v.null())),
   })
     .index("by_longTermGoal", ["longTermGoalId"])
-    .index("by_resolvedAt", ["resolvedAt"])
-    .index("by_endedAt", ["endedAt"]),
+    .index("by_resolvedAt", ["resolvedAt"]),
 
   proposalCards: defineTable({
     threadId: v.string(),
