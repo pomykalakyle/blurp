@@ -104,16 +104,6 @@ export const resolve = mutation({
   },
 });
 
-// Reopen a goal — clears its resolution. Used for undo from the UI.
-export const unresolve = mutation({
-  args: { id: v.id("goals") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, { resolvedAt: null });
-    return null;
-  },
-});
-
 export const remove = mutation({
   args: { id: v.id("goals") },
   returns: v.null(),
