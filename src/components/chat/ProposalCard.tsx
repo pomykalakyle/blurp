@@ -1,9 +1,13 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { Check, Loader2, X } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { Doc, Id } from "../../../convex/_generated/dataModel";
 import { formatEntryDateRange } from "../../lib/date";
+
+// Mirrors CHECK_IN_NEXT in convex/chat/constants.ts. Fired after a card
+// is accepted inside a check-in thread to advance to the next due goal.
+const CHECK_IN_NEXT_TEXT = "__check_in_next__";
 
 type CardDoc = Doc<"proposalCards">;
 
@@ -172,14 +176,16 @@ function summarize(
 
 type Props = {
   card: CardDoc;
+  threadKind: "regular" | "goal_check_in";
 };
 
-export function ProposalCard({ card }: Props) {
+export function ProposalCard({ card, threadKind }: Props) {
   const ltgs = useQuery(api.longTermGoals.list) ?? [];
   const goals = useQuery(api.goals.list) ?? [];
   const entries = useQuery(api.narrativeEntries.list) ?? [];
   const accept = useMutation(api.chat.proposals.accept);
   const dismiss = useMutation(api.chat.proposals.dismiss);
+  const sendMessage = useAction(api.chat.public.sendMessage);
 
   const [pending, setPending] = useState<"accept" | "dismiss" | null>(null);
 
@@ -232,6 +238,15 @@ export function ProposalCard({ card }: Props) {
             setPending("accept");
             try {
               await accept({ id: card._id as Id<"proposalCards"> });
+              // Auto-advance the check-in. Fire-and-forget — the user
+              // doesn't need to wait on the agent turn to dismiss the
+              // pending state.
+              if (threadKind === "goal_check_in") {
+                void sendMessage({
+                  threadId: card.threadId,
+                  prompt: CHECK_IN_NEXT_TEXT,
+                });
+              }
             } finally {
               setPending(null);
             }

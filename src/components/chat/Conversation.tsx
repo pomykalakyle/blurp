@@ -9,10 +9,12 @@ import { Input } from "./Input";
 import { TypingIndicator } from "./TypingIndicator";
 import { FONT_DISPLAY } from "../ui";
 
-// Mirror of CHECK_IN_KICKOFF in convex/chat/constants.ts. The backend sends
-// this sentinel as a user prompt to kick off check-in chats (the assistant
-// is supposed to speak first); we hide it from the UI.
+// Mirrors of CHECK_IN_KICKOFF / CHECK_IN_NEXT in convex/chat/constants.ts.
+// The backend kicks off check-in chats with the open sentinel; the client
+// fires the next sentinel after Kyle accepts a card during a check-in.
+// Both are hidden from the transcript.
 const CHECK_IN_KICKOFF_TEXT = "__check_in_open__";
+const CHECK_IN_NEXT_TEXT = "__check_in_next__";
 
 type Props = {
   threadId: string | null;
@@ -26,6 +28,11 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
 
   const currentThread = useQuery(
     api.chat.public.getThread,
+    threadId ? { threadId } : "skip",
+  );
+
+  const threadKind = useQuery(
+    api.chat.public.getThreadKind,
     threadId ? { threadId } : "skip",
   );
 
@@ -185,10 +192,12 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
               const text = (m as { text?: string }).text ?? "";
               const id = (m as { id?: string }).id;
               if (role === "user" && id) lastUserId = id;
-              // Hide the sentinel kickoff message. It's how check-in chats
-              // are seeded server-side; Kyle shouldn't see it. Card mapping
-              // still works because lastUserId was updated above.
-              if (role === "user" && text === CHECK_IN_KICKOFF_TEXT) {
+              // Hide check-in sentinel messages. Card mapping still works
+              // because lastUserId was updated above.
+              if (
+                role === "user" &&
+                (text === CHECK_IN_KICKOFF_TEXT || text === CHECK_IN_NEXT_TEXT)
+              ) {
                 return null;
               }
               const cardsForMessage =
@@ -200,6 +209,7 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
                   key={m.key}
                   message={m as never}
                   cards={cardsForMessage}
+                  threadKind={threadKind ?? "regular"}
                 />
               );
             });

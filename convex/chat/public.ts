@@ -12,11 +12,10 @@ import { generateText } from "ai";
 import {
   action,
   internalAction,
-  internalQuery,
   mutation,
   query,
 } from "../_generated/server";
-import { components, internal } from "../_generated/api";
+import { api, components, internal } from "../_generated/api";
 import { chatAgent } from "./agent";
 import {
   ABOUT_KYLE_SYSTEM,
@@ -215,7 +214,7 @@ export const getThread = query({
   },
 });
 
-export const getThreadKind = internalQuery({
+export const getThreadKind = query({
   args: { threadId: v.string() },
   returns: v.union(v.literal("regular"), v.literal("goal_check_in")),
   handler: async (ctx, args) => {
@@ -372,7 +371,7 @@ export const sendMessage = action({
     });
 
     const kind: "regular" | "goal_check_in" = await ctx.runQuery(
-      internal.chat.public.getThreadKind,
+      api.chat.public.getThreadKind,
       { threadId: args.threadId },
     );
 
