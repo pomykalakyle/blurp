@@ -53,15 +53,20 @@ export function daysOpenSince(startDateStr) {
 
 export function isWeekendReady(startDateStr) { return daysOpenSince(startDateStr) >= 5; }
 
-// Outcome is derived from goal type + resolvedAt:
-//   achievement + resolvedAt set → success (completed)
-//   achievement + resolvedAt null → not yet success (still open)
-//   avoidance   + resolvedAt set → failure (slipped — resolvedAt records when)
-//   avoidance   + resolvedAt null → success (still clean)
+// Outcome derivation. A goal is "closed out" once reviewedAt is set.
+// Once closed:
+//   achievement + outcomeDate set  → success (completed on outcomeDate)
+//   achievement + outcomeDate null → failure (no completion through review)
+//   avoidance   + outcomeDate set  → failure (slipped on outcomeDate)
+//   avoidance   + outcomeDate null → success (successfully avoided)
+// While still open (reviewedAt null), isGoalSuccess reflects the current
+// "on track" reading: avoidance is succeeding until it slips; achievement
+// is not yet successful until completed.
+export function isGoalClosed(g) { return g.reviewedAt != null; }
+export function isGoalResolved(g) { return isGoalClosed(g); }
 export function isGoalSuccess(g) {
-  const resolved = g.resolvedAt != null;
-  if (g.type === 'achievement') return resolved;
-  return !resolved;
+  const outcomeSet = g.outcomeDate != null;
+  if (g.type === 'achievement') return outcomeSet;
+  return !outcomeSet;
 }
 export function isGoalFail(g) { return !isGoalSuccess(g); }
-export function isGoalResolved(g) { return g.resolvedAt != null; }

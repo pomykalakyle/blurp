@@ -30,14 +30,14 @@ function compareUrgency(a, b) {
 
 function sortGoalsForDisplay(goals, showResolved) {
   const open = [];
-  const resolved = [];
+  const closed = [];
   for (const g of goals) {
-    if (g.resolvedAt != null) resolved.push(g);
+    if (g.reviewedAt != null) closed.push(g);
     else open.push(g);
   }
   open.sort(compareUrgency);
-  resolved.sort((a, b) => (b.resolvedAt ?? 0) - (a.resolvedAt ?? 0));
-  return showResolved ? [...open, ...resolved] : open;
+  closed.sort((a, b) => (b.reviewedAt ?? 0) - (a.reviewedAt ?? 0));
+  return showResolved ? [...open, ...closed] : open;
 }
 
 function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse }) {
@@ -110,7 +110,8 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
       description: g.description ?? null,
       notes: g.notes ?? null,
       targetDate: g.targetDate ?? null,
-      resolvedAt: g.resolvedAt ?? null,
+      outcomeDate: g.outcomeDate ?? null,
+      reviewedAt: g.reviewedAt ?? null,
       _creationTime: g._creationTime,
     }));
   }, [goalsRaw]);
@@ -133,16 +134,16 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
 
   const { paneAGoals, paneAResolvedCount } = useMemo(() => {
     const open = [];
-    const resolved = [];
+    const closed = [];
     for (const g of goals) {
-      if (g.resolvedAt != null) resolved.push(g);
+      if (g.reviewedAt != null) closed.push(g);
       else open.push(g);
     }
     open.sort(compareUrgency);
-    resolved.sort((a, b) => (b.resolvedAt ?? 0) - (a.resolvedAt ?? 0));
+    closed.sort((a, b) => (b.reviewedAt ?? 0) - (a.reviewedAt ?? 0));
     return {
-      paneAGoals: showResolvedA ? [...open, ...resolved] : open,
-      paneAResolvedCount: resolved.length,
+      paneAGoals: showResolvedA ? [...open, ...closed] : open,
+      paneAResolvedCount: closed.length,
     };
   }, [goals, showResolvedA]);
 
@@ -160,7 +161,7 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
   const paneBResolvedCount = useMemo(() => {
     let c = 0;
     for (const g of goals) {
-      if (g.longTermGoalId && g.resolvedAt != null) c++;
+      if (g.longTermGoalId && g.reviewedAt != null) c++;
     }
     return c;
   }, [goals]);

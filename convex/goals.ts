@@ -42,7 +42,6 @@ export const create = mutation({
       targetDate: args.targetDate,
       outcomeDate: null,
       reviewedAt: null,
-      resolvedAt: null,
     });
   },
 });
@@ -76,11 +75,7 @@ export const update = mutation({
     if (args.notes !== undefined) patch.notes = args.notes;
     if (args.targetDate !== undefined) patch.targetDate = args.targetDate;
     if (args.outcomeDate !== undefined) patch.outcomeDate = args.outcomeDate;
-    if (args.reviewedAt !== undefined) {
-      patch.reviewedAt = args.reviewedAt;
-      // Dual-write during the transitional period. Phase 3 drops this.
-      patch.resolvedAt = args.reviewedAt;
-    }
+    if (args.reviewedAt !== undefined) patch.reviewedAt = args.reviewedAt;
     await ctx.db.patch(args.id, patch);
     return null;
   },
@@ -110,8 +105,6 @@ export const resolve = mutation({
     await ctx.db.patch(args.id, {
       reviewedAt: when,
       outcomeDate: args.outcomeDate,
-      // Dual-write during the transitional period. Phase 3 drops this.
-      resolvedAt: when,
       notes: nextNotes,
     });
     return null;

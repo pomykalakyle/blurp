@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Archive, Check, ChevronDown, ChevronRight, Edit2, Flag, MoreHorizontal, Trash2 } from 'lucide-react';
 import { FONT_DISPLAY, IconButton } from './ui';
-import { isGoalResolved, isGoalSuccess } from '../lib/core';
+import { isGoalClosed, isGoalSuccess } from '../lib/core';
 
 function PortalMenu({ open, anchorRef, onClose, children }) {
   const [pos, setPos] = useState(null);
@@ -96,15 +96,15 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
 export function GoalRow({ goal, ltgLabel = null, onToggle, onEdit, onDelete, readOnly = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const goalMenuRef = useRef(null);
+  const closed = isGoalClosed(goal);
   const success = isGoalSuccess(goal);
-  const resolved = isGoalResolved(goal);
-  const struck = goal.type === 'achievement' && resolved;
-  // Toggle button labels:
-  //   achievement resolved → "Reopen"; not resolved → "Mark complete"
-  //   avoidance   resolved → "Unmark slip" (reopen); not resolved → "Flag slip"
+  // Strike-through any closed achievement (whether succeeded or failed)
+  // and any avoidance that ended in success — they represent "done with."
+  // Avoidance failures (slips) stay un-struck so the row reads as a flag.
+  const struck = closed && (goal.type === 'achievement' || success);
   const toggleTitle = goal.type === 'achievement'
-    ? (resolved ? 'Reopen' : 'Mark complete')
-    : (resolved ? 'Unmark slip' : 'Flag slip');
+    ? (closed ? 'Reopen' : 'Mark complete')
+    : (closed ? 'Unmark slip' : 'Flag slip');
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-soft last:border-b-0 hover-bg-surface-soft transition-colors">
@@ -143,28 +143,31 @@ export function GoalRow({ goal, ltgLabel = null, onToggle, onEdit, onDelete, rea
 }
 
 export function GoalIcon({ goal }) {
-  const resolved = isGoalResolved(goal);
-  if (goal.type === 'achievement') {
-    if (resolved) {
-      return (
-        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-success-tint border border-success">
-          <Check size={14} className="text-success-strong" />
-        </div>
-      );
+  const closed = isGoalClosed(goal);
+  const success = isGoalSuccess(goal);
+  if (!closed) {
+    if (goal.type === 'achievement') {
+      return <div className="w-6 h-6 rounded-full border-2 border-default" />;
     }
-    return <div className="w-6 h-6 rounded-full border-2 border-default" />;
-  }
-  // Avoidance: resolved = slipped (failure); unresolved = still clean.
-  if (resolved) {
+    // Avoidance not yet closed — currently on the success side.
     return (
-      <div className="w-6 h-6 rounded-full bg-danger-tint border border-danger flex items-center justify-center">
-        <Flag size={12} className="icon-flag-fill" />
+      <div className="w-6 h-6 rounded-full bg-success-tint-soft border border-success flex items-center justify-center">
+        <Check size={12} className="text-success" />
       </div>
     );
   }
+  // Closed out — render based on actual outcome.
+  if (success) {
+    return (
+      <div className="w-6 h-6 rounded-full flex items-center justify-center bg-success-tint border border-success">
+        <Check size={14} className="text-success-strong" />
+      </div>
+    );
+  }
+  // Failure: failed achievement or slipped avoidance.
   return (
-    <div className="w-6 h-6 rounded-full bg-success-tint-soft border border-success flex items-center justify-center">
-      <Check size={12} className="text-success" />
+    <div className="w-6 h-6 rounded-full bg-danger-tint border border-danger flex items-center justify-center">
+      <Flag size={12} className="icon-flag-fill" />
     </div>
   );
 }
