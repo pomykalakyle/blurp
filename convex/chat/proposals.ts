@@ -181,12 +181,18 @@ async function applyProposal(
       if ((target.reviewedAt ?? null) !== null) {
         return { applied: false, staleReason: "goal already closed out" };
       }
+      // Tolerate legacy shape from historical proposalCards rows.
+      const reviewedAt = p.reviewedAt ?? p.resolvedAt;
+      if (reviewedAt === undefined) {
+        return { applied: false, staleReason: "resolve proposal missing reviewedAt" };
+      }
+      const outcomeDate = p.outcomeDate ?? null;
       const nextNotes = p.notesAppend
         ? appendNote(target.notes ?? null, p.notesAppend)
         : target.notes ?? null;
       await ctx.db.patch(p.goalId, {
-        reviewedAt: p.reviewedAt,
-        outcomeDate: p.outcomeDate,
+        reviewedAt,
+        outcomeDate,
         notes: nextNotes,
       });
       return { applied: true };

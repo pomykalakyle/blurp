@@ -65,7 +65,10 @@ function summarizeProposal(card: ProposalCard): string {
     case "deleteLtg":
       return `delete long-term goal ${p.ltgId}`;
     case "resolveGoal": {
-      const outcome = p.outcomeDate === null ? "no event" : `event on ${p.outcomeDate}`;
+      // outcomeDate is optional in the validator for historical-row compat;
+      // current code always writes it.
+      const od = p.outcomeDate;
+      const outcome = od == null ? "no event" : `event on ${od}`;
       return `close out goal ${p.goalId} (${outcome})${p.notesAppend ? ` (note: ${p.notesAppend})` : ""}`;
     }
     case "toggleGoalState":
