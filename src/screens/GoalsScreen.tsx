@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import {
@@ -15,10 +15,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, ChevronRight, GripVertical, Loader2, Plus } from 'lucide-react';
-import { Button, FONT_DISPLAY } from '../components/ui';
+import { GripVertical, Loader2, Plus } from 'lucide-react';
+import { FONT_DISPLAY } from '../components/ui';
 import { GoalRow, LtgGroup } from '../components/goals';
-import { AddGoalModal, AddLtgModal, EditGoalModal } from './ThisWeekScreen';
 
 function compareUrgency(a, b) {
   const aDated = !!a.targetDate;
@@ -41,7 +40,7 @@ function sortGoalsForDisplay(goals, showResolved) {
   return showResolved ? [...open, ...resolved] : open;
 }
 
-function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg }) {
+function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ltg.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -67,12 +66,8 @@ function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse, onToggleG
         goals={goals}
         collapsed={collapsed}
         onToggleCollapse={onToggleCollapse}
-        onToggleGoal={onToggleGoal}
-        onEditGoal={onEditGoal}
-        onDeleteGoal={onDeleteGoal}
-        onRenameLtg={onRenameLtg}
-        onArchiveLtg={onArchiveLtg}
         dragHandle={handle}
+        readOnly
       />
     </div>
   );
@@ -81,19 +76,8 @@ function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse, onToggleG
 export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
   const ltgsRaw = useQuery(api.longTermGoals.list);
   const goalsRaw = useQuery(api.goals.list);
-  const createLtg = useMutation(api.longTermGoals.create);
-  const updateLtgM = useMutation(api.longTermGoals.update);
-  const endLtg = useMutation(api.longTermGoals.end);
-  const reopenLtg = useMutation(api.longTermGoals.reopen);
   const reorderLtgs = useMutation(api.longTermGoals.reorder);
-  const createGoal = useMutation(api.goals.create);
-  const updateGoalM = useMutation(api.goals.update);
-  const resolveGoalM = useMutation(api.goals.resolve);
-  const removeGoalM = useMutation(api.goals.remove);
 
-  const [addGoalOpen, setAddGoalOpen] = useState(false);
-  const [addLtgOpen, setAddLtgOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState(null);
   const [showResolvedA, setShowResolvedA] = useState(false);
   const [showResolvedB, setShowResolvedB] = useState(false);
   const [collapsed, setCollapsed] = useState({});
@@ -147,7 +131,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
     return m;
   }, [ltgs]);
 
-  // Pane A: flat urgency-sorted list of ALL goals (with and without LTG).
   const { paneAGoals, paneAResolvedCount } = useMemo(() => {
     const open = [];
     const resolved = [];
@@ -163,7 +146,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
     };
   }, [goals, showResolvedA]);
 
-  // Pane B: goals grouped by LTG.
   const goalsByLtg = useMemo(() => {
     const m = new Map();
     for (const l of ltgs) m.set(l.id, []);
@@ -200,36 +182,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
     reorderLtgs({ ids: next });
   };
 
-  const handleToggleGoal = (gid) => {
-    const g = goals.find(x => x.id === gid);
-    if (!g) return;
-    if (g.resolvedAt != null) updateGoalM({ id: gid, resolvedAt: null });
-    else resolveGoalM({ id: gid });
-  };
-  const handleAddGoal = (g) => createGoal({
-    title: g.title,
-    type: g.type,
-    longTermGoalId: g.longTermGoalId || null,
-    description: g.description ?? null,
-    targetDate: g.targetDate ?? null,
-  });
-  const handleUpdateGoal = (gid, updates) => updateGoalM({
-    id: gid,
-    title: updates.title,
-    longTermGoalId: updates.longTermGoalId,
-    description: updates.description,
-    notes: updates.notes,
-    targetDate: updates.targetDate,
-  });
-  const handleDeleteGoal = (gid) => removeGoalM({ id: gid });
-  const handleAddLtg = async (title, description = '') => {
-    const id = await createLtg({ title, description, notes: null });
-    return { id, title, description, status: 'active' };
-  };
-  const handleRenameLtg = (id, title) => updateLtgM({ id, title });
-  const handleArchiveLtg = (id) => endLtg({ id });
-  const handleUnarchiveLtg = (id) => reopenLtg({ id });
-
   const onScroll = () => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -245,7 +197,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
     );
   }
 
-  // ------- Pane A: flat all-goals list -------
   const paneA = (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -262,10 +213,7 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
 
       {paneAGoals.length === 0 ? (
         <div className="border border-dashed border-default rounded-lg p-8 text-center text-muted">
-          <p className="mb-3">No goals yet.</p>
-          <Button onClick={() => setAddGoalOpen(true)} variant="subtle" size="sm">
-            <Plus size={14} /> Add your first goal
-          </Button>
+          No goals yet. Start a chat to add one.
         </div>
       ) : (
         <div className="border border-soft rounded-lg overflow-hidden">
@@ -274,9 +222,7 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
               key={g.id}
               goal={g}
               ltgLabel={g.longTermGoalId ? ltgTitleById.get(g.longTermGoalId) ?? null : null}
-              onToggle={() => handleToggleGoal(g.id)}
-              onEdit={() => setEditingGoal(g)}
-              onDelete={() => handleDeleteGoal(g.id)}
+              readOnly
             />
           ))}
         </div>
@@ -284,35 +230,23 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
     </section>
   );
 
-  // ------- Pane B: LTG-grouped view -------
   const paneB = (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm uppercase tracking-widest text-muted">By long-term goal</h2>
-        <div className="flex items-center gap-3">
-          {paneBResolvedCount > 0 && (
-            <button
-              onClick={() => setShowResolvedB(s => !s)}
-              className="text-xs text-muted hover-text-cream transition-colors"
-            >
-              {showResolvedB ? 'Hide resolved' : `Show resolved (${paneBResolvedCount})`}
-            </button>
-          )}
+        {paneBResolvedCount > 0 && (
           <button
-            onClick={() => setAddLtgOpen(true)}
-            className="text-xs text-muted hover-text-accent transition-colors flex items-center gap-1"
+            onClick={() => setShowResolvedB(s => !s)}
+            className="text-xs text-muted hover-text-cream transition-colors"
           >
-            <Plus size={12} /> New
+            {showResolvedB ? 'Hide resolved' : `Show resolved (${paneBResolvedCount})`}
           </button>
-        </div>
+        )}
       </div>
 
       {activeLtgs.length === 0 && archivedLtgs.length === 0 ? (
         <div className="border border-dashed border-default rounded-lg p-8 text-center text-muted">
-          <p className="mb-3">No long-term goals yet.</p>
-          <Button onClick={() => setAddLtgOpen(true)} variant="subtle" size="sm">
-            <Plus size={14} /> Add a long-term goal
-          </Button>
+          No long-term goals yet. Start a chat to add one.
         </div>
       ) : (
         <>
@@ -328,11 +262,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
                       goals={ltgGoals}
                       collapsed={!!collapsed[ltg.id]}
                       onToggleCollapse={() => setCollapsed(c => ({ ...c, [ltg.id]: !c[ltg.id] }))}
-                      onToggleGoal={handleToggleGoal}
-                      onEditGoal={setEditingGoal}
-                      onDeleteGoal={handleDeleteGoal}
-                      onRenameLtg={(t) => handleRenameLtg(ltg.id, t)}
-                      onArchiveLtg={() => handleArchiveLtg(ltg.id)}
                     />
                   );
                 })}
@@ -352,13 +281,8 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
                     goals={ltgGoals}
                     collapsed={collapsed[ltg.id] !== false}
                     onToggleCollapse={() => setCollapsed(c => ({ ...c, [ltg.id]: c[ltg.id] === false }))}
-                    onToggleGoal={handleToggleGoal}
-                    onEditGoal={setEditingGoal}
-                    onDeleteGoal={handleDeleteGoal}
-                    onRenameLtg={(t) => handleRenameLtg(ltg.id, t)}
-                    onArchiveLtg={() => handleArchiveLtg(ltg.id)}
-                    onUnarchiveLtg={() => handleUnarchiveLtg(ltg.id)}
                     dimmed
+                    readOnly
                   />
                 );
               })}
@@ -408,12 +332,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--c-accent)'}>
           <Plus size={24} />
         </button>
-
-        <AddGoalModal open={addGoalOpen} onClose={() => setAddGoalOpen(false)} ltgs={activeLtgs} onAdd={handleAddGoal} onAddLtg={handleAddLtg} />
-        <AddLtgModal open={addLtgOpen} onClose={() => setAddLtgOpen(false)} onAdd={(title, desc) => { handleAddLtg(title, desc); setAddLtgOpen(false); }} />
-        <EditGoalModal open={!!editingGoal} goal={editingGoal} ltgs={activeLtgs}
-          onClose={() => setEditingGoal(null)}
-          onSave={(updates) => { handleUpdateGoal(editingGoal.id, updates); setEditingGoal(null); }} />
       </main>
     </>
   );

@@ -28,7 +28,7 @@ function PortalMenu({ open, anchorRef, onClose, children }) {
   );
 }
 
-export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg, onUnarchiveLtg, renderGoal, dragHandle = null, dimmed = false }) {
+export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal, onEditGoal, onDeleteGoal, onRenameLtg, onArchiveLtg, onUnarchiveLtg, renderGoal, dragHandle = null, dimmed = false, readOnly = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(ltg.title);
@@ -41,7 +41,7 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
         {dragHandle}
         <button onClick={onToggleCollapse} className="flex items-center gap-2 flex-1 text-left group">
           {collapsed ? <ChevronRight size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
-          {renaming ? (
+          {renaming && !readOnly ? (
             <input autoFocus value={renameVal}
               onChange={(e) => setRenameVal(e.target.value)}
               onBlur={() => { onRenameLtg(renameVal || ltg.title); setRenaming(false); }}
@@ -56,23 +56,25 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
           )}
           {goals.length > 0 && <span className="text-xs text-muted ml-2">{successCount}/{goals.length}</span>}
         </button>
-        <div ref={ltgMenuRef}>
-          <IconButton onClick={() => setMenuOpen(v => !v)} title="Group menu"><MoreHorizontal size={16} /></IconButton>
-          <PortalMenu open={menuOpen} anchorRef={ltgMenuRef} onClose={() => setMenuOpen(false)}>
-            <button onClick={() => { setRenaming(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
-              <Edit2 size={14} /> Rename
-            </button>
-            {onUnarchiveLtg ? (
-              <button onClick={() => { onUnarchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
-                <Archive size={14} /> Unarchive
+        {!readOnly && (
+          <div ref={ltgMenuRef}>
+            <IconButton onClick={() => setMenuOpen(v => !v)} title="Group menu"><MoreHorizontal size={16} /></IconButton>
+            <PortalMenu open={menuOpen} anchorRef={ltgMenuRef} onClose={() => setMenuOpen(false)}>
+              <button onClick={() => { setRenaming(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+                <Edit2 size={14} /> Rename
               </button>
-            ) : (
-              <button onClick={() => { onArchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
-                <Archive size={14} /> Archive
-              </button>
-            )}
-          </PortalMenu>
-        </div>
+              {onUnarchiveLtg ? (
+                <button onClick={() => { onUnarchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+                  <Archive size={14} /> Unarchive
+                </button>
+              ) : (
+                <button onClick={() => { onArchiveLtg(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-cream hover-bg-surface-2 flex items-center gap-2">
+                  <Archive size={14} /> Archive
+                </button>
+              )}
+            </PortalMenu>
+          </div>
+        )}
       </div>
       {!collapsed && (
         <div>
@@ -82,7 +84,7 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onToggleGoal
             goals.map(g => (
               renderGoal
                 ? renderGoal(g)
-                : <GoalRow key={g.id} goal={g} onToggle={() => onToggleGoal(g.id)} onEdit={() => onEditGoal(g)} onDelete={() => onDeleteGoal(g.id)} />
+                : <GoalRow key={g.id} goal={g} readOnly={readOnly} onToggle={readOnly ? undefined : () => onToggleGoal(g.id)} onEdit={readOnly ? undefined : () => onEditGoal(g)} onDelete={readOnly ? undefined : () => onDeleteGoal(g.id)} />
             ))
           )}
         </div>
