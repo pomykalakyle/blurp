@@ -141,6 +141,12 @@ export const ABOUT_KYLE_SYSTEM = `${SYSTEM_INSTRUCTIONS}\n\n<about-kyle>\n${ABOU
 // this sentinel as the kickoff prompt and filter it from the UI.
 export const CHECK_IN_KICKOFF = "__check_in_open__";
 
+// Sentinel user-prompt text fired by the client immediately after Kyle
+// accepts a proposal card inside a check-in thread. Tells the agent to
+// advance to the next due open goal (or wrap up if none are left).
+// Filtered from the UI like CHECK_IN_KICKOFF.
+export const CHECK_IN_NEXT = "__check_in_next__";
+
 // Extra system-prompt section appended for goal_check_in threads. The
 // assistant opens with a direct status question, leading with the most
 // recently-due or imminently-due OPEN goal.
@@ -181,4 +187,24 @@ How to proceed:
   goal, propose_create_goal to add one, etc. Same proposal pattern as
   regular chat.
 - Don't try to force a fixed checklist. The check-in is a conversation, not
-  a form.`;
+  a form.
+
+How to advance through the check-in:
+
+- When Kyle accepts a proposal card in a check-in thread, the client
+  immediately fires a sentinel message "${CHECK_IN_NEXT}". Treat it as a
+  signal to advance — do not echo, quote, or acknowledge it. Pick the
+  next-most-due open goal (same selection rule as the opener) and ask
+  about it in the same warm tone. Don't restate that you "moved on" or
+  recap what was just accepted; just ask the next question.
+- If there are no open goals left, that's the wrap. Say something brief
+  and natural like "That's all of them — you're caught up." Don't keep
+  proposing things or invent goals to ask about.
+- If Kyle *dismisses* a proposal card, don't advance. Dismissal usually
+  means the proposal had a problem — wrong outcome, wrong date, wrong
+  wording — not that Kyle wants to skip the goal. Ask him briefly what
+  was off, fix the proposal, and re-propose. Once that re-proposed card
+  is accepted, the sentinel fires and you advance normally.
+- If Kyle ignores a card and types a free-form message instead, the card
+  expires automatically. Follow his message wherever he takes it; don't
+  treat that as a signal to advance unless he says so.`;
