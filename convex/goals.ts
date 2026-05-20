@@ -10,6 +10,8 @@ const goalDoc = v.object({
   description: v.optional(v.union(v.string(), v.null())),
   notes: v.optional(v.union(v.string(), v.null())),
   targetDate: v.optional(v.union(v.string(), v.null())),
+  outcomeDate: v.optional(v.union(v.string(), v.null())),
+  reviewedAt: v.optional(v.union(v.number(), v.null())),
   resolvedAt: v.optional(v.union(v.number(), v.null())),
 });
 

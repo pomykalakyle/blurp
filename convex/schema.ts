@@ -3,16 +3,24 @@ import { v } from "convex/values";
 import { proposalValidator, proposalStatusValidator } from "./chat/proposalValidator";
 
 // Goal state schema notes:
-//   - `resolvedAt` (number | null) is the resolution timestamp. Combined with
-//     `type`, it derives the outcome:
-//       * achievement + resolvedAt != null → completed
-//       * avoidance   + resolvedAt != null → slipped
-//       * avoidance   + resolvedAt == null + targetDate passed → succeeded (implicit)
-//       * any         + resolvedAt == null → open
+//   - `targetDate` (ISO date | null) is the planned/deadline date.
+//   - `outcomeDate` (ISO date | null) is when the goal-event actually
+//     happened in the real world — a completion for achievements, a slip
+//     for avoidances. Null means no such event occurred.
+//   - `reviewedAt` (ms timestamp | null) is when the goal was officially
+//     closed out (typically via a review with the agent). Null = open.
+//   - Outcome is derived from (type, outcomeDate, reviewedAt):
+//       * reviewedAt == null                                   → open
+//       * achievement + outcomeDate != null                    → succeeded
+//       * achievement + outcomeDate == null + reviewedAt set   → failed
+//       * avoidance   + outcomeDate != null                    → failed (slipped)
+//       * avoidance   + outcomeDate == null + reviewedAt set   → succeeded
 //   - `description` is "what this goal is about". `notes` is running
 //     commentary appended over the goal's life.
-//   - `targetDate` is the target/deadline (nullable). `resolvedAt` is when
-//     it actually closed (can be before or after the target).
+//
+// `resolvedAt` is the legacy single timestamp being phased out. Kept
+// here during the migration so existing rows validate; will be dropped
+// in a follow-up commit once the rename is fully rolled out.
 
 export default defineSchema({
   ping: defineTable({
@@ -37,9 +45,12 @@ export default defineSchema({
     description: v.optional(v.union(v.string(), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
     targetDate: v.optional(v.union(v.string(), v.null())),
+    outcomeDate: v.optional(v.union(v.string(), v.null())),
+    reviewedAt: v.optional(v.union(v.number(), v.null())),
     resolvedAt: v.optional(v.union(v.number(), v.null())),
   })
     .index("by_longTermGoal", ["longTermGoalId"])
+    .index("by_reviewedAt", ["reviewedAt"])
     .index("by_resolvedAt", ["resolvedAt"]),
 
   proposalCards: defineTable({
