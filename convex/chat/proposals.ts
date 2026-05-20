@@ -126,17 +126,11 @@ async function applyProposal(
       if (p.notes !== undefined) patch.notes = p.notes;
       if (p.targetDate !== undefined) patch.targetDate = p.targetDate;
       if (p.outcomeDate !== undefined) patch.outcomeDate = p.outcomeDate;
-      if (p.reviewedAt !== undefined) {
-        patch.reviewedAt = p.reviewedAt;
-        // Dual-write resolvedAt during the transitional period so the
-        // Goals screen (still on the old field) keeps showing the right
-        // resolved state. Phase 3 drops this.
-        patch.resolvedAt = p.reviewedAt;
-      }
-      // Legacy field mappings (historical proposalCards rows):
+      if (p.reviewedAt !== undefined) patch.reviewedAt = p.reviewedAt;
+      // Legacy field mapping (historical proposalCards rows): translate
+      // an old-shape resolvedAt edit into reviewedAt.
       if (p.resolvedAt !== undefined && p.reviewedAt === undefined) {
         patch.reviewedAt = p.resolvedAt;
-        patch.resolvedAt = p.resolvedAt;
       }
       if (p.endDate !== undefined && p.targetDate === undefined) {
         patch.targetDate = p.endDate;
@@ -193,10 +187,6 @@ async function applyProposal(
       await ctx.db.patch(p.goalId, {
         reviewedAt: p.reviewedAt,
         outcomeDate: p.outcomeDate,
-        // Dual-write resolvedAt during the transitional period so the
-        // Goals screen (still on the old field) keeps showing the right
-        // resolved state. Phase 3 drops this.
-        resolvedAt: p.reviewedAt,
         notes: nextNotes,
       });
       return { applied: true };
