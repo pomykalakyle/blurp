@@ -103,7 +103,8 @@ async function applyProposal(
         description: p.description ?? p.notes ?? null,
         notes: null,
         targetDate: p.targetDate ?? p.endDate ?? null,
-        resolvedAt: null,
+        outcomeDate: null,
+        reviewedAt: null,
       });
       return { applied: true };
     }
