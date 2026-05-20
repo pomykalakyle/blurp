@@ -125,9 +125,19 @@ async function applyProposal(
       if (p.description !== undefined) patch.description = p.description;
       if (p.notes !== undefined) patch.notes = p.notes;
       if (p.targetDate !== undefined) patch.targetDate = p.targetDate;
-      if (p.resolvedAt !== undefined) patch.resolvedAt = p.resolvedAt;
-      // Legacy field mapping (in case a historical editGoal card is
-      // somehow re-accepted): endDate → targetDate.
+      if (p.outcomeDate !== undefined) patch.outcomeDate = p.outcomeDate;
+      if (p.reviewedAt !== undefined) {
+        patch.reviewedAt = p.reviewedAt;
+        // Dual-write resolvedAt during the transitional period so the
+        // Goals screen (still on the old field) keeps showing the right
+        // resolved state. Phase 3 drops this.
+        patch.resolvedAt = p.reviewedAt;
+      }
+      // Legacy field mappings (historical proposalCards rows):
+      if (p.resolvedAt !== undefined && p.reviewedAt === undefined) {
+        patch.reviewedAt = p.resolvedAt;
+        patch.resolvedAt = p.resolvedAt;
+      }
       if (p.endDate !== undefined && p.targetDate === undefined) {
         patch.targetDate = p.endDate;
       }
@@ -174,14 +184,19 @@ async function applyProposal(
     case "resolveGoal": {
       const target = await ctx.db.get(p.goalId);
       if (!target) return { applied: false, staleReason: "goal no longer exists" };
-      if ((target.resolvedAt ?? null) !== null) {
-        return { applied: false, staleReason: "goal already resolved" };
+      if ((target.reviewedAt ?? null) !== null) {
+        return { applied: false, staleReason: "goal already closed out" };
       }
       const nextNotes = p.notesAppend
         ? appendNote(target.notes ?? null, p.notesAppend)
         : target.notes ?? null;
       await ctx.db.patch(p.goalId, {
-        resolvedAt: p.resolvedAt,
+        reviewedAt: p.reviewedAt,
+        outcomeDate: p.outcomeDate,
+        // Dual-write resolvedAt during the transitional period so the
+        // Goals screen (still on the old field) keeps showing the right
+        // resolved state. Phase 3 drops this.
+        resolvedAt: p.reviewedAt,
         notes: nextNotes,
       });
       return { applied: true };

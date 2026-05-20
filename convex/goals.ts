@@ -40,6 +40,8 @@ export const create = mutation({
       description: args.description,
       notes: null,
       targetDate: args.targetDate,
+      outcomeDate: null,
+      reviewedAt: null,
       resolvedAt: null,
     });
   },
@@ -53,7 +55,8 @@ export const update = mutation({
     description: v.optional(v.union(v.string(), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
     targetDate: v.optional(v.union(v.string(), v.null())),
-    resolvedAt: v.optional(v.union(v.number(), v.null())),
+    outcomeDate: v.optional(v.union(v.string(), v.null())),
+    reviewedAt: v.optional(v.union(v.number(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -63,6 +66,8 @@ export const update = mutation({
       description?: string | null;
       notes?: string | null;
       targetDate?: string | null;
+      outcomeDate?: string | null;
+      reviewedAt?: number | null;
       resolvedAt?: number | null;
     } = {};
     if (args.title !== undefined) patch.title = args.title;
@@ -70,27 +75,31 @@ export const update = mutation({
     if (args.description !== undefined) patch.description = args.description;
     if (args.notes !== undefined) patch.notes = args.notes;
     if (args.targetDate !== undefined) patch.targetDate = args.targetDate;
-    if (args.resolvedAt !== undefined) patch.resolvedAt = args.resolvedAt;
+    if (args.outcomeDate !== undefined) patch.outcomeDate = args.outcomeDate;
+    if (args.reviewedAt !== undefined) {
+      patch.reviewedAt = args.reviewedAt;
+      // Dual-write during the transitional period. Phase 3 drops this.
+      patch.resolvedAt = args.reviewedAt;
+    }
     await ctx.db.patch(args.id, patch);
     return null;
   },
 });
 
-// Resolve a goal — marks it done (for achievements) or slipped (for
-// avoidances). Sets `resolvedAt` to the provided timestamp (default now).
-// If `notesAppend` is provided, appends it to the existing `notes` field
-// with a blank-line separator.
+// Close out a goal by recording its outcome and the review timestamp.
+// Outcome semantics: see schema.ts comment block.
 export const resolve = mutation({
   args: {
     id: v.id("goals"),
-    resolvedAt: v.optional(v.number()),
+    outcomeDate: v.union(v.string(), v.null()),
+    reviewedAt: v.optional(v.number()),
     notesAppend: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const g = await ctx.db.get(args.id);
     if (!g) return null;
-    const when = args.resolvedAt ?? Date.now();
+    const when = args.reviewedAt ?? Date.now();
     const existing = (g.notes ?? "").trim();
     const append = args.notesAppend?.trim();
     const nextNotes = append
@@ -99,6 +108,9 @@ export const resolve = mutation({
         : append
       : g.notes ?? null;
     await ctx.db.patch(args.id, {
+      reviewedAt: when,
+      outcomeDate: args.outcomeDate,
+      // Dual-write during the transitional period. Phase 3 drops this.
       resolvedAt: when,
       notes: nextNotes,
     });
@@ -115,12 +127,12 @@ export const remove = mutation({
   },
 });
 
-// Lookup tool target: goals that have been resolved at some point.
+// Lookup tool target: goals that have been closed out at some point.
 export const listResolved = internalQuery({
   args: {},
   returns: v.array(goalDoc),
   handler: async (ctx) => {
     const all = await ctx.db.query("goals").collect();
-    return all.filter((g) => (g.resolvedAt ?? null) !== null);
+    return all.filter((g) => (g.reviewedAt ?? null) !== null);
   },
 });

@@ -30,12 +30,13 @@ export const proposalValidator = v.union(
     goalId: v.id("goals"),
     title: v.optional(v.string()),
     longTermGoalId: v.optional(v.union(v.id("longTermGoals"), v.null())),
-    // New fields:
     description: v.optional(v.union(v.string(), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
     targetDate: v.optional(v.union(v.string(), v.null())),
+    outcomeDate: v.optional(v.union(v.string(), v.null())),
+    reviewedAt: v.optional(v.union(v.number(), v.null())),
+    // Legacy fields (historical proposalCards only):
     resolvedAt: v.optional(v.union(v.number(), v.null())),
-    // Legacy field (historical):
     endDate: v.optional(v.union(v.string(), v.null())),
   }),
   v.object({
@@ -60,7 +61,8 @@ export const proposalValidator = v.union(
   v.object({
     kind: v.literal("resolveGoal"),
     goalId: v.id("goals"),
-    resolvedAt: v.number(),
+    reviewedAt: v.number(),
+    outcomeDate: v.union(v.string(), v.null()),
     notesAppend: v.union(v.string(), v.null()),
   }),
   // Legacy: historical rows from before propose_toggle_goal_state was

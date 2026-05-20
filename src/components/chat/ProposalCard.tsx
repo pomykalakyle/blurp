@@ -61,11 +61,13 @@ function summarize(
         changes.push(`notes → ${proposal.notes ? `"${proposal.notes}"` : "none"}`);
       if (proposal.targetDate !== undefined)
         changes.push(`target date → ${proposal.targetDate ?? "none"}`);
-      if (proposal.resolvedAt !== undefined) {
+      if (proposal.outcomeDate !== undefined)
+        changes.push(`outcome date → ${proposal.outcomeDate ?? "none"}`);
+      if (proposal.reviewedAt !== undefined) {
         changes.push(
-          proposal.resolvedAt === null
-            ? "reopen (clear resolvedAt)"
-            : `resolvedAt → ${new Date(proposal.resolvedAt).toLocaleDateString()}`,
+          proposal.reviewedAt === null
+            ? "reopen (clear reviewedAt)"
+            : `reviewed → ${new Date(proposal.reviewedAt).toLocaleDateString()}`,
         );
       }
       return {
@@ -109,16 +111,29 @@ function summarize(
     }
     case "resolveGoal": {
       const goal = goals.find((g) => g._id === proposal.goalId);
-      // Type-aware card label: achievement → "Mark complete", avoidance → "Flag slip".
-      const label =
-        goal?.type === "avoidance" ? "Flag slip" : "Mark complete";
-      const when = new Date(proposal.resolvedAt).toLocaleDateString();
+      // Outcome derived from (type, outcomeDate): see schema.ts.
+      const succeeded =
+        goal?.type === "achievement"
+          ? proposal.outcomeDate !== null
+          : proposal.outcomeDate === null;
+      const label = succeeded ? "Mark succeeded" : "Mark failed";
+      const reviewedOn = new Date(proposal.reviewedAt).toLocaleDateString();
+      let outcomeLine: string;
+      if (goal?.type === "achievement") {
+        outcomeLine = proposal.outcomeDate
+          ? `completed on ${proposal.outcomeDate}`
+          : "no completion through review";
+      } else {
+        outcomeLine = proposal.outcomeDate
+          ? `slipped on ${proposal.outcomeDate}`
+          : "successfully avoided through review";
+      }
       const noteLine = proposal.notesAppend
         ? `\nNote: ${proposal.notesAppend}`
         : "";
       return {
         kindLabel: label,
-        body: `"${goal?.title ?? "(unknown goal)"}" — ${when}${noteLine}`,
+        body: `"${goal?.title ?? "(unknown goal)"}" — ${outcomeLine}\nReviewed ${reviewedOn}${noteLine}`,
       };
     }
     case "toggleGoalState": {
