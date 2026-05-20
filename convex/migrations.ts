@@ -3,9 +3,39 @@
 // Run after deploy with:
 //   npx convex run --prod migrations:migrateLtgsAddNotes '{}'
 //   npx convex run --prod migrations:migrateGoalsRenameResolvedAt '{}'
+//   npx convex run --prod migrations:clearGoalsResolvedAt '{}'
 
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+
+// Removes the now-dead `resolvedAt` field from every goal row, after
+// Phase 3 stopped writing to it. Must run before the schema change that
+// drops the field, otherwise the schema deploy will fail validation on
+// rows that still carry it.
+export const clearGoalsResolvedAt = mutation({
+  args: {},
+  returns: v.object({
+    examined: v.number(),
+    cleared: v.number(),
+    skipped: v.number(),
+  }),
+  handler: async (ctx) => {
+    const all = await ctx.db.query("goals").collect();
+    let cleared = 0;
+    let skipped = 0;
+    for (const g of all) {
+      if (g.resolvedAt === undefined) {
+        skipped++;
+        continue;
+      }
+      await ctx.db.patch(g._id, {
+        resolvedAt: undefined,
+      } as unknown as Partial<typeof g>);
+      cleared++;
+    }
+    return { examined: all.length, cleared, skipped };
+  },
+});
 
 // Splits `resolvedAt` into the new `reviewedAt` (ms timestamp) and
 // `outcomeDate` (ISO date) fields. Idempotent — rows that already have
