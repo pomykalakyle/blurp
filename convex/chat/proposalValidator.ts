@@ -61,8 +61,13 @@ export const proposalValidator = v.union(
   v.object({
     kind: v.literal("resolveGoal"),
     goalId: v.id("goals"),
-    reviewedAt: v.number(),
-    outcomeDate: v.union(v.string(), v.null()),
+    // New shape — what current code writes. Optional in the validator
+    // so historical resolveGoal rows (which only have resolvedAt) still
+    // pass schema validation.
+    reviewedAt: v.optional(v.number()),
+    outcomeDate: v.optional(v.union(v.string(), v.null())),
+    // Legacy shape (historical proposalCards only).
+    resolvedAt: v.optional(v.number()),
     notesAppend: v.union(v.string(), v.null()),
   }),
   // Legacy: historical rows from before propose_toggle_goal_state was
