@@ -43,8 +43,9 @@ function summarizeProposal(card: ProposalCard): string {
         p.description !== undefined ? `description→${p.description ?? "none"}` : null,
         p.notes !== undefined ? `notes→${p.notes ?? "none"}` : null,
         p.targetDate !== undefined ? `targetDate→${p.targetDate ?? "none"}` : null,
-        p.resolvedAt !== undefined
-          ? `resolvedAt→${p.resolvedAt === null ? "null (reopened)" : new Date(p.resolvedAt).toISOString()}`
+        p.outcomeDate !== undefined ? `outcomeDate→${p.outcomeDate ?? "none"}` : null,
+        p.reviewedAt !== undefined
+          ? `reviewedAt→${p.reviewedAt === null ? "null (reopened)" : new Date(p.reviewedAt).toISOString()}`
           : null,
       ].filter((f): f is string => f !== null);
       return `edit goal ${p.goalId} (${fields.join(", ") || "no fields"})`;
@@ -63,8 +64,10 @@ function summarizeProposal(card: ProposalCard): string {
       return `delete goal ${p.goalId}`;
     case "deleteLtg":
       return `delete long-term goal ${p.ltgId}`;
-    case "resolveGoal":
-      return `resolve goal ${p.goalId}${p.notesAppend ? ` (note: ${p.notesAppend})` : ""}`;
+    case "resolveGoal": {
+      const outcome = p.outcomeDate === null ? "no event" : `event on ${p.outcomeDate}`;
+      return `close out goal ${p.goalId} (${outcome})${p.notesAppend ? ` (note: ${p.notesAppend})` : ""}`;
+    }
     case "toggleGoalState":
       // Legacy historical kind; no new code emits this.
       return `(legacy) toggle goal ${p.goalId} state`;
@@ -262,9 +265,16 @@ function formatGoalLine(
   const parts = [`[${g._id}]`, `(${g.type})`, g.title];
   if (parent) parts.push(`[under: ${parent}]`);
   if (g.targetDate) parts.push(`(target ${g.targetDate})`);
-  if (g.resolvedAt) {
-    const outcome = g.type === "achievement" ? "completed" : "slipped";
-    parts.push(`(${outcome} ${new Date(g.resolvedAt).toISOString().slice(0, 10)})`);
+  if (g.reviewedAt) {
+    // Outcome derivation: see schema.ts comment block.
+    let outcome: string;
+    if (g.type === "achievement") {
+      outcome = g.outcomeDate ? `succeeded on ${g.outcomeDate}` : "failed (no completion)";
+    } else {
+      outcome = g.outcomeDate ? `slipped on ${g.outcomeDate}` : "successfully avoided";
+    }
+    const reviewedDate = new Date(g.reviewedAt).toISOString().slice(0, 10);
+    parts.push(`(${outcome}; reviewed ${reviewedDate})`);
   }
   let line = `- ${parts.join(" ")}`;
   if (g.description) line += `\n  description: ${g.description}`;
@@ -342,7 +352,7 @@ ${ltgLines}
 Open goals (not yet resolved):
 ${openGoalLines}
 
-Recently resolved goals (within last 7 days — already done or slipped; do NOT re-prompt status on these):
+Recently closed-out goals (reviewed within last 7 days — outcomes already recorded; do NOT re-prompt status on these):
 ${resolvedGoalLines}
 
 Recent narrative entries (within last 2 weeks or ongoing):

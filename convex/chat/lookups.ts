@@ -15,20 +15,20 @@ export const listActiveLtgs = internalQuery({
   },
 });
 
-// Open goals: not yet resolved. Used as the primary "current goals" list
-// in the chat system context and as the candidate set for check-in
-// opening prompts.
+// Open goals: not yet reviewed/closed out. Used as the primary "current
+// goals" list in the chat system context and as the candidate set for
+// check-in opening prompts.
 export const listOpenGoals = internalQuery({
   args: {},
   handler: async (ctx) => {
     const all = await ctx.db.query("goals").collect();
-    return all.filter((g) => (g.resolvedAt ?? null) === null);
+    return all.filter((g) => (g.reviewedAt ?? null) === null);
   },
 });
 
-// Goals resolved within the last RECENTLY_RESOLVED_DAYS. Surfaced as a
-// secondary section in the chat system context so the assistant can
-// reference recent outcomes without re-proposing them.
+// Goals reviewed/closed out within the last RECENTLY_RESOLVED_DAYS.
+// Surfaced as a secondary section in the chat system context so the
+// assistant can reference recent outcomes without re-proposing them.
 export const listRecentlyResolvedGoals = internalQuery({
   args: {},
   handler: async (ctx) => {
@@ -36,10 +36,10 @@ export const listRecentlyResolvedGoals = internalQuery({
     const all = await ctx.db.query("goals").collect();
     return all
       .filter((g) => {
-        const r = g.resolvedAt ?? null;
+        const r = g.reviewedAt ?? null;
         return r !== null && r >= cutoff;
       })
-      .sort((a, b) => (b.resolvedAt ?? 0) - (a.resolvedAt ?? 0));
+      .sort((a, b) => (b.reviewedAt ?? 0) - (a.reviewedAt ?? 0));
   },
 });
 

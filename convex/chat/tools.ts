@@ -19,7 +19,8 @@ type GoalLookupResult = {
   description: string | null;
   notes: string | null;
   targetDate: string | null;
-  resolvedAt: number | null;
+  outcomeDate: string | null;
+  reviewedAt: number | null;
 };
 
 const goalTypeSchema = z.enum(["achievement", "avoidance"]);
@@ -45,7 +46,7 @@ export const lookupArchivedLtgs = createTool({
 
 export const lookupResolvedGoals = createTool({
   description:
-    "List Kyle's resolved goals (achievements he completed, or avoidances he slipped on). Use when the conversation looks back on past goals or asks how something turned out.",
+    "List Kyle's reviewed (closed-out) goals — both successes and failures. Use when the conversation looks back on past goals or asks how something turned out. Outcome derivation: achievement+outcomeDate set = succeeded; achievement+outcomeDate null = failed; avoidance+outcomeDate set = slipped (failed); avoidance+outcomeDate null = successfully avoided.",
   inputSchema: z.object({}),
   execute: async (ctx): Promise<GoalLookupResult[]> => {
     const docs: Doc<"goals">[] = await ctx.runQuery(internal.goals.listResolved, {});
@@ -57,7 +58,8 @@ export const lookupResolvedGoals = createTool({
       description: d.description ?? null,
       notes: d.notes ?? null,
       targetDate: d.targetDate ?? null,
-      resolvedAt: d.resolvedAt ?? null,
+      outcomeDate: d.outcomeDate ?? null,
+      reviewedAt: d.reviewedAt ?? null,
     }));
   },
 });
@@ -156,7 +158,7 @@ export const proposeCreateLtg = makeProposeTool({
 
 export const proposeEditGoal = makeProposeTool({
   description:
-    "Propose editing an existing goal. Any field can be changed — title, parent LTG, description, notes, target date, or resolution timestamp. Surfaces as a card Kyle accepts. To mark a goal done or slipped, prefer propose_resolve_goal — that's the dedicated tool with the right card label and notes-append behavior. Use edit_goal for corrections, including reopening a goal by clearing resolvedAt.",
+    "Propose editing an existing goal. Any field can be changed — title, parent LTG, description, notes, targetDate, outcomeDate, or reviewedAt. Surfaces as a card Kyle accepts. To mark a goal succeeded or failed, prefer propose_resolve_goal — that's the dedicated tool with the right card label and notes-append. Use propose_edit_goal for corrections, including reopening a closed-out goal by setting reviewedAt and outcomeDate to null.",
   inputSchema: z.object({
     goalId: z.string().describe("Convex ID of the goal to edit."),
     title: z.string().optional(),
@@ -164,11 +166,18 @@ export const proposeEditGoal = makeProposeTool({
     description: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     targetDate: z.string().nullable().optional(),
-    resolvedAt: z
+    outcomeDate: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "ISO date (YYYY-MM-DD) when the goal-event actually happened — the completion for an achievement, the slip for an avoidance. Null if no such event happened.",
+      ),
+    reviewedAt: z
       .number()
       .nullable()
       .optional()
-      .describe("Timestamp (ms). Set to null to reopen a resolved goal."),
+      .describe("Timestamp (ms) of the review/close-out. Set to null along with outcomeDate to reopen a closed goal."),
   }),
   toProposal: (input) => ({
     kind: "editGoal",
@@ -178,7 +187,8 @@ export const proposeEditGoal = makeProposeTool({
     ...(input.description !== undefined ? { description: input.description } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
     ...(input.targetDate !== undefined ? { targetDate: input.targetDate } : {}),
-    ...(input.resolvedAt !== undefined ? { resolvedAt: input.resolvedAt } : {}),
+    ...(input.outcomeDate !== undefined ? { outcomeDate: input.outcomeDate } : {}),
+    ...(input.reviewedAt !== undefined ? { reviewedAt: input.reviewedAt } : {}),
   }),
 });
 
@@ -229,15 +239,21 @@ export const proposeDeleteLtg = makeProposeTool({
 
 export const proposeResolveGoal = makeProposeTool({
   description:
-    "Propose resolving a goal — marking an achievement as completed, or flagging an avoidance as slipped. The semantics depend on goal type: achievement+resolved = completed; avoidance+resolved = slipped. Surfaces as a card with type-aware labeling.",
+    "Propose closing out a goal with an explicit outcome. Outcome is conveyed via outcomeDate: pass the ISO date the goal-event happened (a completion for an achievement, or a slip for an avoidance), or null if no such event happened. Outcome mapping: achievement+outcomeDate set → succeeded; achievement+outcomeDate null → failed; avoidance+outcomeDate set → slipped (failed); avoidance+outcomeDate null → successfully avoided. The card label reflects the actual outcome.",
   inputSchema: z.object({
     goalId: z.string(),
-    resolvedAt: z
+    outcomeDate: z
+      .string()
+      .nullable()
+      .describe(
+        "ISO date (YYYY-MM-DD) of when the goal-event happened. Null if the event did not happen — i.e., the achievement was not completed, or the avoidance was successfully avoided.",
+      ),
+    reviewedAt: z
       .number()
       .nullable()
       .optional()
       .describe(
-        "Optional timestamp (ms epoch) of when the resolution happened. Defaults to now at accept time if omitted.",
+        "Optional timestamp (ms) of when the close-out review happened. Defaults to now at accept time if omitted.",
       ),
     notesAppend: z
       .string()
@@ -248,7 +264,8 @@ export const proposeResolveGoal = makeProposeTool({
   toProposal: (input) => ({
     kind: "resolveGoal",
     goalId: input.goalId,
-    resolvedAt: input.resolvedAt ?? Date.now(),
+    reviewedAt: input.reviewedAt ?? Date.now(),
+    outcomeDate: input.outcomeDate,
     notesAppend: input.notesAppend ?? null,
   }),
 });
