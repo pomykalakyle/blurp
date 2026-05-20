@@ -12,7 +12,6 @@ const goalDoc = v.object({
   targetDate: v.optional(v.union(v.string(), v.null())),
   outcomeDate: v.optional(v.union(v.string(), v.null())),
   reviewedAt: v.optional(v.union(v.number(), v.null())),
-  resolvedAt: v.optional(v.union(v.number(), v.null())),
 });
 
 export const list = query({
