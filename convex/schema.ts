@@ -17,10 +17,6 @@ import { proposalValidator, proposalStatusValidator } from "./chat/proposalValid
 //       * avoidance   + outcomeDate == null + reviewedAt set   → succeeded
 //   - `description` is "what this goal is about". `notes` is running
 //     commentary appended over the goal's life.
-//
-// `resolvedAt` is the legacy single timestamp being phased out. Kept
-// here during the migration so existing rows validate; will be dropped
-// in a follow-up commit once the rename is fully rolled out.
 
 export default defineSchema({
   ping: defineTable({
@@ -47,11 +43,9 @@ export default defineSchema({
     targetDate: v.optional(v.union(v.string(), v.null())),
     outcomeDate: v.optional(v.union(v.string(), v.null())),
     reviewedAt: v.optional(v.union(v.number(), v.null())),
-    resolvedAt: v.optional(v.union(v.number(), v.null())),
   })
     .index("by_longTermGoal", ["longTermGoalId"])
-    .index("by_reviewedAt", ["reviewedAt"])
-    .index("by_resolvedAt", ["resolvedAt"]),
+    .index("by_reviewedAt", ["reviewedAt"]),
 
   proposalCards: defineTable({
     threadId: v.string(),
