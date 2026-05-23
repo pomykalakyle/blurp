@@ -15,6 +15,14 @@ notification opens the PWA at the right place: a scoped goal check-in chat
 for post-end-date pings, or the goals page (with that goal in focus) for
 pre-end-date ones.
 
+This replaces the [2026-05-17 spec](2026-05-17-goal-notifications-spec.md).
+The earlier draft framed notifications narrowly as post-`endDate` check-ins
+on two fixed Pacific slots, with the system tracking how many pings each
+goal had accrued. This version generalizes: notifications also fire before
+`endDate` (reminders), the assistant fully owns timing and copy, and the
+reminder-vs-check-in branch is decided at fire time from the goal's
+current `endDate`.
+
 ---
 
 ## 2. The unified notification model
