@@ -15,13 +15,6 @@ notification opens the PWA at the right place: a scoped goal check-in chat
 for post-end-date pings, or the goals page (with that goal in focus) for
 pre-end-date ones.
 
-This supersedes the 2026-05-17 spec, which assumed only post-end-date
-check-ins, two fixed Pacific slots, and a separate notion of "ping count."
-The model here is broader and simpler: one unified notification entry type,
-the assistant fully owns timing and copy, and the runtime decides
-reminder-vs-check-in behavior dynamically at fire time based on whether the
-goal is currently past its end date.
-
 ---
 
 ## 2. The unified notification model
@@ -35,9 +28,8 @@ minimal triple:
   the entry.
 - A stable id (so it can be cancelled or edited individually).
 
-There is **no separate "kind" field** distinguishing reminders from
-check-ins. Behavior is computed at fire time by checking the goal's current
-`endDate`:
+Whether an entry behaves as a reminder or a check-in is computed at fire
+time from the goal's current `endDate`:
 
 - If `endDate` is in the **future** at fire time → reminder behavior:
   send a push with the entry's body. Tapping opens the goals page with
@@ -62,9 +54,7 @@ A notification entry can be either:
   Pacific"). Fires once, then is deleted.
 - **Recurring** — `daily at HH:MM Pacific until endDate`. Re-fires each day
   at the configured time until the goal's `endDate` passes, at which point
-  the recurrence stops producing fires. (After `endDate`, post-end-date
-  check-ins are scheduled as separate one-off entries; recurrence is a
-  pre-end-date concept.)
+  the recurrence stops producing fires.
 
 A single goal can have any mix of both — for example, a workout goal might
 have a recurring "every morning at 8am" reminder plus a one-off check-in
@@ -77,10 +67,9 @@ wants). All times are interpreted in Pacific.
 
 ## 4. The assistant owns everything
 
-There is no Kyle-facing UI for setting notification times, cadences, or
-copy. There are no system defaults that auto-populate. The assistant adds,
-edits, and removes notification entries via chat tools, the same way it
-proposes any other goal mutation.
+Notification entries are managed entirely through chat. The assistant adds,
+edits, and removes them via the same propose/accept/dismiss flow as other
+goal mutations, choosing the timing and writing the body for each one.
 
 What the assistant is expected to do:
 
@@ -148,8 +137,8 @@ narrow:
 - **Notification entry explicitly removed by an accepted assistant
   proposal** → cancelled.
 
-There is no separate "ping count" to track or reset. The number of pings
-is exactly the number of notification entries the assistant has scheduled.
+The number of pings a goal produces is exactly the number of notification
+entries the assistant has scheduled — nothing else counts or accrues.
 
 ---
 
@@ -196,7 +185,10 @@ live as Convex env vars.
 ## 9. Scheduling: singleton Convex Scheduler job
 
 The runtime uses Convex's built-in scheduler (`ctx.scheduler.runAt`,
-`ctx.scheduler.cancel`). There is no recurring cron and no polling.
+`ctx.scheduler.cancel`), driven by a single in-flight job that re-plans
+itself whenever the set of pending entries changes. The model is
+event-driven: fires happen exactly when an entry is due, with nothing
+running in between.
 
 At any moment, at most one scheduled job exists in the system, pointing at
 the next concrete minute at which at least one notification entry should
