@@ -107,7 +107,7 @@ function makeProposeTool<I>(opts: {
 
 export const proposeCreateGoal = makeProposeTool({
   description:
-    "Propose adding a new goal to Kyle's list. Surfaces as a card he taps to accept; does NOT add the goal directly. Use when you want Kyle to consider tracking a new goal.",
+    "Propose adding a new goal to Kyle's list. Use when you want Kyle to consider tracking a new goal.",
   inputSchema: z.object({
     title: z.string().describe("Short, action-oriented goal title."),
     type: goalTypeSchema.describe(
@@ -138,7 +138,7 @@ export const proposeCreateGoal = makeProposeTool({
 
 export const proposeCreateLtg = makeProposeTool({
   description:
-    "Propose creating a new long-term goal. Surfaces as a card Kyle accepts.",
+    "Propose creating a new long-term goal.",
   inputSchema: z.object({
     title: z.string(),
     description: z.string().describe("One-sentence description of the long-term goal."),
@@ -158,7 +158,7 @@ export const proposeCreateLtg = makeProposeTool({
 
 export const proposeEditGoal = makeProposeTool({
   description:
-    "Propose editing an existing goal. Any field can be changed — title, parent LTG, description, notes, targetDate, outcomeDate, or reviewedAt. Surfaces as a card Kyle accepts. To mark a goal succeeded or failed, prefer propose_resolve_goal — that's the dedicated tool with the right card label and notes-append. Use propose_edit_goal for corrections, including reopening a closed-out goal by setting reviewedAt and outcomeDate to null.",
+    "Propose editing an existing goal. Any field can be changed — title, parent LTG, description, notes, targetDate, outcomeDate, or reviewedAt. To mark a goal succeeded or failed, prefer propose_resolve_goal — that's the dedicated tool with the right outcome handling and notes-append. Use propose_edit_goal for corrections, including reopening a closed-out goal by setting reviewedAt and outcomeDate to null.",
   inputSchema: z.object({
     goalId: z.string().describe("Convex ID of the goal to edit."),
     title: z.string().optional(),
@@ -194,7 +194,7 @@ export const proposeEditGoal = makeProposeTool({
 
 export const proposeEditLtg = makeProposeTool({
   description:
-    "Propose editing an existing long-term goal (rename, change description, or update running notes). Surfaces as a card.",
+    "Propose editing an existing long-term goal (rename, change description, or update running notes).",
   inputSchema: z.object({
     ltgId: z.string(),
     title: z.string().optional(),
@@ -212,7 +212,7 @@ export const proposeEditLtg = makeProposeTool({
 
 export const proposeArchiveLtg = makeProposeTool({
   description:
-    "Propose archiving a long-term goal Kyle has outgrown. Surfaces as a card.",
+    "Propose archiving a long-term goal Kyle has outgrown.",
   inputSchema: z.object({
     ltgId: z.string(),
   }),
@@ -221,7 +221,7 @@ export const proposeArchiveLtg = makeProposeTool({
 
 export const proposeDeleteGoal = makeProposeTool({
   description:
-    "Propose permanently deleting a goal from Kyle's database. Use only when Kyle explicitly wants the goal gone (e.g. 'delete it', 'remove it', 'clear it out'). For finishing a goal that ran its course, prefer propose_resolve_goal. Surfaces as a card.",
+    "Propose permanently deleting a goal from Kyle's database. Use only when Kyle explicitly wants the goal gone (e.g. 'delete it', 'remove it', 'clear it out'). For finishing a goal that ran its course, prefer propose_resolve_goal.",
   inputSchema: z.object({
     goalId: z.string().describe("Convex ID of the goal to delete."),
   }),
@@ -230,7 +230,7 @@ export const proposeDeleteGoal = makeProposeTool({
 
 export const proposeDeleteLtg = makeProposeTool({
   description:
-    "Propose permanently deleting a long-term goal from Kyle's database. Any child goals will have their parent reference cleared but will not themselves be deleted. Use only when Kyle explicitly wants the LTG gone; for outgrowing or wrapping one up, prefer propose_archive_ltg. Surfaces as a card.",
+    "Propose permanently deleting a long-term goal from Kyle's database. Any child goals will have their parent reference cleared but will not themselves be deleted. Use only when Kyle explicitly wants the LTG gone; for outgrowing or wrapping one up, prefer propose_archive_ltg.",
   inputSchema: z.object({
     ltgId: z.string().describe("Convex ID of the long-term goal to delete."),
   }),
@@ -239,7 +239,7 @@ export const proposeDeleteLtg = makeProposeTool({
 
 export const proposeResolveGoal = makeProposeTool({
   description:
-    "Propose closing out a goal with an explicit outcome. Outcome is conveyed via outcomeDate: pass the ISO date the goal-event happened (a completion for an achievement, or a slip for an avoidance), or null if no such event happened. Outcome mapping: achievement+outcomeDate set → succeeded; achievement+outcomeDate null → failed; avoidance+outcomeDate set → slipped (failed); avoidance+outcomeDate null → successfully avoided. The card label reflects the actual outcome.",
+    "Propose closing out a goal with an explicit outcome. Outcome is conveyed via outcomeDate: pass the ISO date the goal-event happened (a completion for an achievement, or a slip for an avoidance), or null if no such event happened. Outcome mapping: achievement+outcomeDate set → succeeded; achievement+outcomeDate null → failed; avoidance+outcomeDate set → slipped (failed); avoidance+outcomeDate null → successfully avoided.",
   inputSchema: z.object({
     goalId: z.string(),
     outcomeDate: z
@@ -272,7 +272,7 @@ export const proposeResolveGoal = makeProposeTool({
 
 export const proposeCreateEntry = makeProposeTool({
   description:
-    "Propose adding a new narrative entry — an event, decision, thought, or thing Kyle is working through. Surfaces as a card he accepts to save to the timeline. Use granular entries (one event per entry) rather than mashing things together. Set endDate equal to startDate for a single-day event, a later ISO date for a span, or null if the event is ongoing.",
+    "Propose adding a new narrative entry — an event, decision, thought, or thing Kyle is working through. Use granular entries (one event per entry) rather than mashing things together. Set endDate equal to startDate for a single-day event, a later ISO date for a span, or null if the event is ongoing.",
   inputSchema: z.object({
     title: z.string().describe("Short, specific title for the event."),
     body: z.string().describe("Body text describing what happened or what Kyle is thinking."),

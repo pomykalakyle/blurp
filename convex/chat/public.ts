@@ -94,7 +94,7 @@ function describeStatus(card: ProposalCard): string {
     case "dismissed":
       return "DISMISSED by Kyle";
     case "expired":
-      return "EXPIRED (Kyle moved on without acting on the card)";
+      return "EXPIRED (Kyle moved on without acting on it)";
     case "stale":
       return "STALE (Kyle accepted but the change could not be applied — underlying data had moved)";
     case "live":
@@ -133,7 +133,7 @@ async function buildPriorTurnProposalsBlock(
     (c) => `- ${summarizeProposal(c)} — ${describeStatus(c)}`,
   );
   return `\n\n<previous-turn-proposals>
-These are the proposal cards you surfaced on your previous turn and what Kyle did with them. Take these outcomes into account before re-proposing the same thing.
+These are the proposals you made on your previous turn and what Kyle did with them. Take these outcomes into account before re-proposing the same thing.
 ${lines.join("\n")}
 </previous-turn-proposals>`;
 }
