@@ -3,7 +3,10 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { Check, Loader2, X } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { Doc, Id } from "../../../convex/_generated/dataModel";
-import { formatEntryDateRange } from "../../lib/date";
+import {
+  formatEntryDateRange,
+  formatNotificationSchedule,
+} from "../../lib/date";
 
 // Mirrors CHECK_IN_NEXT in convex/chat/constants.ts. Fired after a card
 // is accepted inside a check-in thread to advance to the next due goal.
@@ -170,6 +173,39 @@ function summarize(
         kindLabel: "Edit narrative entry",
         body: `"${entry?.title ?? "(unknown entry)"}"\n${changes.join("\n")}`,
       };
+    }
+    case "createNotification": {
+      const goal = goals.find((g) => g._id === proposal.goalId);
+      return {
+        kindLabel: "Add notification",
+        body: `"${goal?.title ?? "(unknown goal)"}"\n${formatNotificationSchedule(proposal.schedule)}\n"${proposal.body}"`,
+      };
+    }
+    case "removeNotification": {
+      const goal = goals.find((g) => g._id === proposal.goalId);
+      return {
+        kindLabel: "Remove notification",
+        body: `"${goal?.title ?? "(unknown goal)"}"`,
+      };
+    }
+    case "updateNotification": {
+      const goal = goals.find((g) => g._id === proposal.goalId);
+      const changes: string[] = [];
+      if (proposal.schedule !== undefined)
+        changes.push(`schedule → ${formatNotificationSchedule(proposal.schedule)}`);
+      if (proposal.body !== undefined)
+        changes.push(`body → "${proposal.body}"`);
+      return {
+        kindLabel: "Edit notification",
+        body: `"${goal?.title ?? "(unknown goal)"}"\n${changes.join("\n")}`,
+      };
+    }
+    default: {
+      // Exhaustiveness check: TS errors here if a new proposal kind is
+      // added without a case above. Catches the white-screen failure mode.
+      const _exhaustive: never = proposal;
+      void _exhaustive;
+      return { kindLabel: "Unknown proposal", body: "" };
     }
   }
 }
