@@ -21,6 +21,8 @@ import type * as longTermGoals from "../longTermGoals.js";
 import type * as migrations from "../migrations.js";
 import type * as narrativeEntries from "../narrativeEntries.js";
 import type * as ping from "../ping.js";
+import type * as push from "../push.js";
+import type * as pushNode from "../pushNode.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +44,8 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   narrativeEntries: typeof narrativeEntries;
   ping: typeof ping;
+  push: typeof push;
+  pushNode: typeof pushNode;
 }>;
 
 /**
