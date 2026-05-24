@@ -1,4 +1,4 @@
-# Handoff — blurp (Life Tracking App)
+# Handoff — Blurp
 
 ## Goal
 
@@ -98,7 +98,7 @@ The fix is correct — the prior deploy showed tools actually firing and writing
 ## Project Context
 
 - **User**: Kyle Pomykala (`pomykalakyle` on GitHub, `kyle@lakesail.com`). LakeSail engineer. Doesn't want LakeSail's "Sail" product referenced in this repo.
-- **Working directory**: `/Users/kylepomykala/Documents/projects/Life Tracking App`.
+- **Working directory**: `/Users/kylepomykala/Documents/projects/blurp`.
 - **App is single-user by design.** No auth in v1; gated by URL obscurity + AI Gateway spend cap (Kyle to configure if he hasn't).
 - **Kyle's collaboration preferences** (also in `~/.claude/projects/.../memory/`):
   - Push to prod and verify on Vercel — don't propose local testing.
