@@ -12,20 +12,38 @@ spec first.
 
 ## 1. Schema
 
-### `notifications` field on `goals`
+### `notifications` table
 
-Each goal row carries a `notifications` array. Each entry:
+Notifications live in their own table — not as a field on `goals` — so the
+same machinery can be reused for non-goal subjects later (LTGs, narrative
+entries, weekly reviews). Each row:
 
-- `id` — stable string id (so it can be cancelled or edited individually).
+- `subject` — discriminated union identifying what the notification belongs
+  to. For v1 the only variant is `{ kind: "goal", goalId: Id<"goals"> }`;
+  new variants get added when those features arrive (e.g.,
+  `{ kind: "ltg", ltgId: Id<"longTermGoals"> }`).
 - `schedule` — discriminated union:
   - `{ kind: "oneoff", at: number }` — absolute ms timestamp.
   - `{ kind: "daily", time: "HH:MM" }` — daily at this Pacific time, until
-    the goal's `endDate` passes.
+    the parent's `endDate` passes.
 - `body` — plain-text message for the lock screen.
+- `createdAt` — ms timestamp.
 
-The recurrence stop condition (`until endDate`) is implicit on the
-`"daily"` kind — there's no end-date field on the entry itself, the
+Cardinality: one notification belongs to exactly one subject; one goal can
+own any number of notifications (multiple one-offs, one or more recurring
+schedules, or any mix).
+
+Index `by_goal` on `["subject.goalId"]` for the per-goal lookup. Future
+subject kinds add their own per-kind index when needed. The scheduler's
+own query pattern is described in §3.
+
+The recurrence stop condition (`until endDate` for `"daily"` schedules) is
+implicit: there's no end-date field on the notification itself, the
 scheduler reads it off the parent goal at re-plan time.
+
+**Cascade on subject deletion.** When a goal is resolved (done / slipped)
+or deleted, the same mutation deletes every notification row whose
+`subject` points at it. Notifications never outlive their subject.
 
 ### `pushSubscriptions` table
 
@@ -57,14 +75,17 @@ flow. Tool signatures (exact field names finalized at build):
 - **`propose_create_goal`** — extended to accept a `notifications` array
   alongside the existing goal fields. Required to contain at least one
   entry scheduled after `endDate` (the system prompt enforces this; the
-  schema does not). Accepting the proposal creates the goal and its
-  notifications atomically.
+  schema does not). The accept mutation inserts the goal row, then inserts
+  one row in the `notifications` table per entry with
+  `subject: { kind: "goal", goalId }` — atomic in a single transaction.
 - **`add_goal_notification(goalId, schedule, body)`** — proposes adding
-  one entry to an existing goal.
+  one entry. Accept inserts a `notifications` row.
 - **`remove_goal_notification(goalId, notificationId)`** — proposes
-  removing a specific entry.
+  removing a specific entry. `notificationId` is an `Id<"notifications">`;
+  `goalId` is kept on the signature so the proposal validator can confirm
+  the notification's `subject.goalId` matches before applying.
 - **`update_goal_notification(goalId, notificationId, patch)`** — proposes
-  editing the body, schedule, or both.
+  editing the body, schedule, or both. Same `goalId` validation as remove.
 
 `propose_edit_goal` is deliberately not extended with notification fields.
 Editing the title/dates of a goal and editing what pings about it are
@@ -183,14 +204,15 @@ The build splits into two pushes for verification:
   Verifies that iOS Web Push actually works in his install before
   anything else is built on top.
 
-- **Push B — notification entries + scheduler + scoped check-in.** Add
-  the `notifications` field to the goal schema, the singleton scheduler
-  worker, the bundling logic, the scoped check-in chat creation, the
-  `scopeGoalIds` system-prompt branch, the extended `propose_create_goal`
-  and the three add/remove/update notification tools, and the
-  URL-param-driven tap targets in the frontend. End state: a goal with
-  notification entries actually pings Kyle's phone at the configured
-  times, and tapping opens the right place.
+- **Push B — notifications table + scheduler + scoped check-in.** Add the
+  `notifications` table and `scheduledNotification` singleton, the
+  singleton scheduler worker, the bundling logic, the scoped check-in
+  chat creation, the `scopeGoalIds` system-prompt branch, the extended
+  `propose_create_goal` and the three add/remove/update notification
+  tools, the cascade-on-goal-deletion behavior, and the URL-param-driven
+  tap targets in the frontend. End state: a goal with notifications
+  actually pings Kyle's phone at the configured times, and tapping opens
+  the right place.
 
 Push A is shippable on its own and de-risks the iOS-side unknowns. Push B
 is when the system becomes useful.
