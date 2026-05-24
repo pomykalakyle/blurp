@@ -56,9 +56,10 @@ A notification entry can be either:
   at the configured time until the goal's `endDate` passes, at which point
   the recurrence stops producing fires.
 
-A single goal can have any mix of both — for example, a workout goal might
-have a recurring "every morning at 8am" reminder plus a one-off check-in
-the day after `endDate` at 10am.
+A single goal can carry any number of notifications — multiple one-offs,
+one or more recurring schedules, or any mix. For example, a workout goal
+might have a recurring "every morning at 8am" reminder plus two one-off
+check-ins (the day after `endDate` at 10am and again three days later).
 
 Per-minute precision throughout (the assistant can schedule 7:42am if it
 wants). All times are interpreted in Pacific.
