@@ -71,4 +71,18 @@ export default defineSchema({
     threadId: v.string(),
     kind: v.union(v.literal("regular"), v.literal("goal_check_in")),
   }).index("by_threadId", ["threadId"]),
+
+  // Web Push subscriptions registered by the PWA. One row per device.
+  // `endpoint` is the push-service URL APNs/FCM gave us; `keys` are the
+  // encryption keys the browser generated on the device. The send action
+  // (convex/pushNode.ts) deletes the row when a send returns 410 Gone.
+  pushSubscriptions: defineTable({
+    endpoint: v.string(),
+    keys: v.object({
+      p256dh: v.string(),
+      auth: v.string(),
+    }),
+    createdAt: v.number(),
+    lastSeenAt: v.number(),
+  }).index("by_endpoint", ["endpoint"]),
 });
