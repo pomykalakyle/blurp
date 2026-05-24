@@ -217,6 +217,21 @@ export const CHECK_IN_KICKOFF = "__check_in_open__";
 // Filtered from the UI like CHECK_IN_KICKOFF.
 export const CHECK_IN_NEXT = "__check_in_next__";
 
+// Extra system-prompt section appended for scoped check-in threads —
+// the kind created by the notification scheduler when one or more
+// notifications fire past their goal's targetDate. Stacked on top of
+// CHECK_IN_INSTRUCTIONS to constrain focus to the bundled goals.
+export const SCOPED_CHECK_IN_INSTRUCTIONS = `## Scope of this check-in
+
+This is a scoped check-in triggered by notifications firing past their
+goal's targetDate. The "Open goals" section above is already filtered
+to just the goals in scope — they're the only ones to discuss in this
+thread. Open with the most-recently-due one (same selection rule as
+the regular check-in opener) and work through the bundle in turn. If
+Kyle brings up something outside the scoped goals, follow the
+conversation but don't propose changes to goals you can't see; suggest
+opening a regular chat for that.`;
+
 // Extra system-prompt section appended for goal_check_in threads. The
 // assistant opens with a direct status question, leading with the most
 // recently-due or imminently-due OPEN goal.

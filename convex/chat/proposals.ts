@@ -5,8 +5,20 @@ import {
   mutation,
   query,
 } from "../_generated/server";
+import { internal } from "../_generated/api";
 import { Doc } from "../_generated/dataModel";
 import { proposalValidator } from "./proposalValidator";
+
+// Proposal kinds whose accept changes the notifications table — and
+// therefore should trigger the scheduler to re-plan its next fire.
+const NOTIFICATION_AFFECTING_KINDS = new Set([
+  "createGoal", // may bundle notifications
+  "createNotification",
+  "removeNotification",
+  "updateNotification",
+  "deleteGoal", // cascade removes notifications
+  "resolveGoal", // cascade removes notifications
+]);
 
 export const internalCreate = internalMutation({
   args: {
@@ -312,6 +324,12 @@ export const accept = mutation({
         status: "accepted",
         resolvedAt: Date.now(),
       });
+      // Notification-affecting accepts trigger a scheduler replan so
+      // the next fire time stays correct after the underlying rows
+      // changed.
+      if (NOTIFICATION_AFFECTING_KINDS.has(card.proposal.kind)) {
+        await ctx.runMutation(internal.notificationsScheduler.replan, {});
+      }
     } else {
       await ctx.db.patch(args.id, {
         status: "stale",

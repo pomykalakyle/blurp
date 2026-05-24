@@ -70,7 +70,19 @@ export default defineSchema({
   chatThreadMeta: defineTable({
     threadId: v.string(),
     kind: v.union(v.literal("regular"), v.literal("goal_check_in")),
+    // For scoped check-ins created by the notification scheduler — the
+    // set of goals the chat is anchored to. Unset on regular threads and
+    // on manually-opened check-in threads.
+    scopeGoalIds: v.optional(v.array(v.id("goals"))),
   }).index("by_threadId", ["threadId"]),
+
+  // Singleton: tracks the currently-in-flight notification scheduler
+  // job. At most one row exists. Used so replan can cancel the pending
+  // job safely when the set of pending notifications changes.
+  scheduledNotification: defineTable({
+    scheduledFunctionId: v.id("_scheduled_functions"),
+    firesAt: v.number(),
+  }),
 
   // Notifications attached to a goal (or, in the future, to other subjects
   // like LTGs or weekly reviews). The `subject` discriminated union is the
