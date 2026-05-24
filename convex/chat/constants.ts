@@ -164,12 +164,14 @@ like a mistranscription, don't paper over it or guess — ask a short
 clarifying question and name the part you're unsure about (e.g. "did you
 mean X or Y?"). Better to confirm than to act on a misheard word.`;
 
-// Chat model: GPT-5.5 via the Vercel AI Gateway. Reasoning effort is
-// passed per-call as providerOptions.openai.reasoningEffort = "medium"
-// — see convex/chat/public.ts. Medium gives the conversation enough
-// judgment to handle dictation, push back well, and pick reasonable
-// notification schedules without paying for full reasoning depth.
-export const CHAT_MODEL = "openai/gpt-5.5";
+// Chat model: GPT-5.4-mini via the Vercel AI Gateway. Reasoning effort
+// is passed per-call as providerOptions.openai.reasoningEffort =
+// "medium" — see convex/chat/public.ts. Mini reasons faster and
+// cheaper than the flagship at the same effort, and at medium gives
+// enough judgment for tool selection, dictation correction, and the
+// notification-scheduling decisions in this app. There's no
+// gpt-5.5-mini on the gateway yet — 5.4-mini is the newest mini.
+export const CHAT_MODEL = "openai/gpt-5.4-mini";
 
 // Title model: nano with minimal reasoning. Titles are 3-6 words, no
 // reasoning needed. ~$0.05/M input, $0.40/M output — essentially free.
