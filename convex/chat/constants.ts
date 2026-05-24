@@ -164,8 +164,27 @@ like a mistranscription, don't paper over it or guess — ask a short
 clarifying question and name the part you're unsure about (e.g. "did you
 mean X or Y?"). Better to confirm than to act on a misheard word.`;
 
-export const CHAT_MODEL = "anthropic/claude-sonnet-4.6";
-export const TITLE_MODEL = "anthropic/claude-haiku-4.5";
+// Chat model: GPT-5.5 via the Vercel AI Gateway. Reasoning effort is
+// passed per-call as providerOptions.openai.reasoningEffort = "medium"
+// — see convex/chat/public.ts. Medium gives the conversation enough
+// judgment to handle dictation, push back well, and pick reasonable
+// notification schedules without paying for full reasoning depth.
+export const CHAT_MODEL = "openai/gpt-5.5";
+
+// Title model: nano with minimal reasoning. Titles are 3-6 words, no
+// reasoning needed. ~$0.05/M input, $0.40/M output — essentially free.
+export const TITLE_MODEL = "openai/gpt-5-nano";
+
+// Provider options for the chat model. Keep here so both streamText
+// call sites (sendMessage + openCheckInChat) stay in sync.
+export const CHAT_PROVIDER_OPTIONS = {
+  openai: { reasoningEffort: "medium" as const },
+};
+
+// Provider options for the title model — skip reasoning entirely.
+export const TITLE_PROVIDER_OPTIONS = {
+  openai: { reasoningEffort: "minimal" as const },
+};
 
 export const ABOUT_KYLE_SYSTEM = `${SYSTEM_INSTRUCTIONS}\n\n<about-kyle>\n${ABOUT_KYLE}\n</about-kyle>`;
 
