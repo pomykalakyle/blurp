@@ -72,6 +72,35 @@ export default defineSchema({
     kind: v.union(v.literal("regular"), v.literal("goal_check_in")),
   }).index("by_threadId", ["threadId"]),
 
+  // Notifications attached to a goal (or, in the future, to other subjects
+  // like LTGs or weekly reviews). The `subject` discriminated union is the
+  // future-extension point; today only the goal variant is used. The
+  // scheduler reads these rows to know what to fire and when. See
+  // documentation/2026-05-22-goal-notifications-technical-spec.md §1.
+  notifications: defineTable({
+    subject: v.union(
+      v.object({
+        kind: v.literal("goal"),
+        goalId: v.id("goals"),
+      }),
+    ),
+    schedule: v.union(
+      // One-off: fires once at `at` (ms timestamp), then is deleted.
+      v.object({
+        kind: v.literal("oneoff"),
+        at: v.number(),
+      }),
+      // Recurring: fires daily at `time` (HH:MM, 24-hour Pacific) until
+      // the parent's endDate passes.
+      v.object({
+        kind: v.literal("daily"),
+        time: v.string(),
+      }),
+    ),
+    body: v.string(),
+    createdAt: v.number(),
+  }).index("by_goal", ["subject.goalId"]),
+
   // Web Push subscriptions registered by the PWA. One row per device.
   // `endpoint` is the push-service URL APNs/FCM gave us; `keys` are the
   // encryption keys the browser generated on the device. The send action

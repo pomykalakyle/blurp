@@ -321,3 +321,98 @@ export const proposeEditEntry = makeProposeTool({
     ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
   }),
 });
+
+// Schedule input shape for notification tools. The agent expresses
+// one-off times as ISO datetime strings (any timezone-bearing form);
+// toProposal converts to a ms timestamp for storage. Daily times are
+// passed as HH:MM and interpreted as Pacific.
+const scheduleInputSchema = z.union([
+  z.object({
+    kind: z.literal("oneoff"),
+    at: z
+      .string()
+      .describe(
+        "ISO datetime when this notification should fire — include the timezone offset, e.g. '2026-05-25T09:00:00-07:00'. Use Pacific (-07:00 PDT / -08:00 PST) unless Kyle says otherwise.",
+      ),
+  }),
+  z.object({
+    kind: z.literal("daily"),
+    time: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .describe(
+        "Daily firing time as 24-hour HH:MM in Pacific — e.g. '08:00' or '19:30'. Re-fires every day until the goal's targetDate passes.",
+      ),
+  }),
+]);
+
+function toScheduleStorage(
+  input: z.infer<typeof scheduleInputSchema>,
+): { kind: "oneoff"; at: number } | { kind: "daily"; time: string } {
+  if (input.kind === "oneoff") {
+    const ms = Date.parse(input.at);
+    if (Number.isNaN(ms)) {
+      throw new Error(`Invalid ISO datetime for one-off notification: ${input.at}`);
+    }
+    return { kind: "oneoff", at: ms };
+  }
+  return { kind: "daily", time: input.time };
+}
+
+export const proposeAddGoalNotification = makeProposeTool({
+  description:
+    "Propose adding a notification (reminder or check-in) to an existing goal. A notification is a firing time plus a message that shows up on Kyle's lock screen. If the goal's targetDate is in the future when the notification fires, it behaves as a reminder; if past, it bundles into a check-in chat. Use after Kyle asks to be pinged about something — typical patterns: a daily morning reminder while the goal is open, a one-off check-in for the day after the targetDate.",
+  inputSchema: z.object({
+    goalId: z.string().describe("Convex ID of the goal this notification belongs to."),
+    schedule: scheduleInputSchema,
+    body: z
+      .string()
+      .describe(
+        "Plain-text message for the lock screen. Conversational and specific to this entry — e.g. 'Time to work out' or 'How'd the week of workouts shake out?'",
+      ),
+  }),
+  toProposal: (input) => ({
+    kind: "createNotification",
+    goalId: input.goalId,
+    schedule: toScheduleStorage(input.schedule),
+    body: input.body,
+  }),
+});
+
+export const proposeRemoveGoalNotification = makeProposeTool({
+  description:
+    "Propose removing a specific notification from a goal. The notification ID comes from the goal's notifications list in the system context.",
+  inputSchema: z.object({
+    goalId: z.string().describe("Convex ID of the goal."),
+    notificationId: z
+      .string()
+      .describe("Convex ID of the notification to remove, as shown in the goal's notifications list."),
+  }),
+  toProposal: (input) => ({
+    kind: "removeNotification",
+    goalId: input.goalId,
+    notificationId: input.notificationId,
+  }),
+});
+
+export const proposeUpdateGoalNotification = makeProposeTool({
+  description:
+    "Propose editing a notification's schedule, body, or both. Pass only the fields that change; omit the rest.",
+  inputSchema: z.object({
+    goalId: z.string().describe("Convex ID of the goal."),
+    notificationId: z
+      .string()
+      .describe("Convex ID of the notification to edit, as shown in the goal's notifications list."),
+    schedule: scheduleInputSchema.optional(),
+    body: z.string().optional(),
+  }),
+  toProposal: (input) => ({
+    kind: "updateNotification",
+    goalId: input.goalId,
+    notificationId: input.notificationId,
+    ...(input.schedule !== undefined
+      ? { schedule: toScheduleStorage(input.schedule) }
+      : {}),
+    ...(input.body !== undefined ? { body: input.body } : {}),
+  }),
+});
