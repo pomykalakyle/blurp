@@ -7,7 +7,7 @@ Status: Draft for review
 
 ## 1. Summary
 
-A conversational surface for Claude inside the Life Tracking App. Kyle opens a Chat section, starts or returns to a thread, and talks freely with Claude about his goals, his long-term goals, and how he's thinking about his life. Claude can see Kyle's current goals and long-term goals on every turn and can look up older information when relevant. When Claude wants to make a change — add a goal, archive a long-term goal, mark something done — it doesn't act directly; it surfaces a proposal card that Kyle taps to accept or ignore. The chat works equally well on iPhone and desktop, syncs across both, and is structured so Claude can eventually be granted more autonomy without rebuilding it.
+A conversational surface for Claude inside Blurp. Kyle opens a Chat section, starts or returns to a thread, and talks freely with Claude about his goals, his long-term goals, and how he's thinking about his life. Claude can see Kyle's current goals and long-term goals on every turn and can look up older information when relevant. When Claude wants to make a change — add a goal, archive a long-term goal, mark something done — it doesn't act directly; it surfaces a proposal card that Kyle taps to accept or ignore. The chat works equally well on iPhone and desktop, syncs across both, and is structured so Claude can eventually be granted more autonomy without rebuilding it.
 
 ---
 
