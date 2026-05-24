@@ -94,7 +94,7 @@ async function applyProposal(
   const p = card.proposal;
   switch (p.kind) {
     case "createGoal": {
-      await ctx.db.insert("goals", {
+      const goalId = await ctx.db.insert("goals", {
         title: p.title,
         type: p.type,
         longTermGoalId: p.longTermGoalId,
@@ -106,6 +106,17 @@ async function applyProposal(
         outcomeDate: null,
         reviewedAt: null,
       });
+      // B2: bundle the goal's initial notifications atomically.
+      // Optional on the proposal so legacy createGoal rows still apply.
+      const now = Date.now();
+      for (const n of p.notifications ?? []) {
+        await ctx.db.insert("notifications", {
+          subject: { kind: "goal", goalId },
+          schedule: n.schedule,
+          body: n.body,
+          createdAt: now,
+        });
+      }
       return { applied: true };
     }
     case "createLtg": {

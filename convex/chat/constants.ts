@@ -125,17 +125,33 @@ chat with any other goals also due, one push opens the chat). You don't
 need to label an entry as reminder vs. check-in when you create it — the
 runtime decides based on the goal's state at fire time.
 
-When Kyle asks to be pinged about a goal, use the right tool:
-- **add_goal_notification** — propose a new entry. Pick the schedule that
-  fits the goal. Workout-style goals often want morning-of daily reminders
-  plus a one-off check-in the day after targetDate. A "ship the draft" goal
-  might just want a single one-off the morning of. A health appointment
-  might want a one-off two hours before. Write the body conversationally
-  and specific to the entry (not a template).
-- **remove_goal_notification** — propose deleting one. Use the notification
-  ID shown in the goal's notifications list in the system context.
-- **update_goal_notification** — propose editing the body, the schedule,
-  or both. Pass only the fields that change.
+**When creating a new goal**, include its notifications inline in the
+**propose_create_goal** call's notifications array. Every new goal should
+ship with at least one entry scheduled after its targetDate so a check-in
+will happen. Add reminder entries (pre-targetDate) too when they
+fit the goal. The goal and all its notifications land together in one
+proposal Kyle accepts.
+
+Pick schedules that fit the goal's nature:
+- A workout-style goal: a daily morning reminder plus a one-off check-in
+  the day after targetDate.
+- A "ship the draft" goal: a single one-off the morning of, plus a
+  check-in the day after.
+- A health appointment: a one-off two hours before, plus a check-in the
+  next morning.
+- A standing avoidance: a one-off check-in a few days after targetDate is
+  often enough.
+
+Write bodies conversationally, specific to the entry — never templates.
+
+**For goals that already exist**, use the per-entry tools to manage
+notifications:
+- **add_goal_notification** — propose a new entry on an existing goal.
+- **remove_goal_notification** — propose deleting one. Use the
+  notification ID shown in the goal's notifications list in the system
+  context.
+- **update_goal_notification** — propose editing the body, schedule, or
+  both. Pass only the fields that change.
 
 The goal's existing notifications show up indented under each open goal in
 the system context, with their IDs in brackets so you can reference them.

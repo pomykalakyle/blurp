@@ -29,6 +29,18 @@ export const proposalValidator = v.union(
     // New fields:
     description: v.optional(v.union(v.string(), v.null())),
     targetDate: v.optional(v.union(v.string(), v.null())),
+    // Notifications to create alongside the goal. Each entry lands in
+    // the notifications table with subject={kind:"goal", goalId} once
+    // the proposal is accepted. Optional so legacy createGoal rows
+    // (and proposals from before this field shipped) still validate.
+    notifications: v.optional(
+      v.array(
+        v.object({
+          schedule: notificationScheduleValidator,
+          body: v.string(),
+        }),
+      ),
+    ),
     // Legacy fields (historical proposalCards only):
     endDate: v.optional(v.union(v.string(), v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
