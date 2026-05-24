@@ -19,9 +19,11 @@ import { api, components, internal } from "../_generated/api";
 import { chatAgent } from "./agent";
 import {
   ABOUT_KYLE_SYSTEM,
+  CHAT_PROVIDER_OPTIONS,
   CHECK_IN_INSTRUCTIONS,
   CHECK_IN_KICKOFF,
   TITLE_MODEL,
+  TITLE_PROVIDER_OPTIONS,
 } from "./constants";
 import { pacificDate, pacificDateTime } from "./dates";
 import type { Doc } from "../_generated/dataModel";
@@ -435,6 +437,7 @@ export const sendMessage = action({
       {
         prompt: args.prompt,
         system,
+        providerOptions: CHAT_PROVIDER_OPTIONS,
         onStepFinish: (step) => {
           console.log("[chat] step finished:", {
             finishReason: step.finishReason,
@@ -472,6 +475,7 @@ export const openCheckInChat = internalAction({
       {
         prompt: CHECK_IN_KICKOFF,
         system,
+        providerOptions: CHAT_PROVIDER_OPTIONS,
         onStepFinish: (step) => {
           console.log("[check-in open] step finished:", {
             finishReason: step.finishReason,
@@ -582,6 +586,7 @@ User: ${userText.slice(0, 400)}`;
       const result = await generateText({
         model: gateway(TITLE_MODEL),
         prompt: titlePrompt,
+        providerOptions: TITLE_PROVIDER_OPTIONS,
       });
       text = result.text;
     } catch (err) {
