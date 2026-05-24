@@ -9,3 +9,27 @@ export function pacificDate(date: Date = new Date()): string {
   // app uses for ISO date strings.
   return new Intl.DateTimeFormat("en-CA", { timeZone: PACIFIC_TZ }).format(date);
 }
+
+// Formats a ms timestamp as "YYYY-MM-DD HH:MM Pacific" — used for
+// surfacing one-off notification fire times in the chat system context.
+export function pacificDateTime(ms: number): string {
+  const d = new Date(ms);
+  const datePart = pacificDate(d);
+  const timePart = new Intl.DateTimeFormat("en-GB", {
+    timeZone: PACIFIC_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+  return `${datePart} ${timePart} Pacific`;
+}
+
+// Parses an ISO datetime string (any timezone-bearing format) and
+// returns its ms timestamp. Throws on invalid input.
+export function parseIsoToMs(iso: string): number {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) {
+    throw new Error(`Invalid ISO datetime: ${iso}`);
+  }
+  return ms;
+}

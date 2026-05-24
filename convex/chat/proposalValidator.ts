@@ -1,5 +1,19 @@
 import { v } from "convex/values";
 
+// Notification schedule — shared between the storage shape on
+// `notifications.schedule` and the notification-related proposal kinds
+// below. `at` is a ms timestamp; `time` is HH:MM in 24-hour Pacific.
+export const notificationScheduleValidator = v.union(
+  v.object({
+    kind: v.literal("oneoff"),
+    at: v.number(),
+  }),
+  v.object({
+    kind: v.literal("daily"),
+    time: v.string(),
+  }),
+);
+
 // Proposal payloads. The validators accept BOTH the new shape (used by
 // current code) and the legacy shape (still present in historical
 // proposalCards rows from before the 2026-05-18 schema redesign). Legacy
@@ -96,6 +110,24 @@ export const proposalValidator = v.union(
     body: v.optional(v.string()),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.union(v.string(), v.null())),
+  }),
+  v.object({
+    kind: v.literal("createNotification"),
+    goalId: v.id("goals"),
+    schedule: notificationScheduleValidator,
+    body: v.string(),
+  }),
+  v.object({
+    kind: v.literal("removeNotification"),
+    goalId: v.id("goals"),
+    notificationId: v.id("notifications"),
+  }),
+  v.object({
+    kind: v.literal("updateNotification"),
+    goalId: v.id("goals"),
+    notificationId: v.id("notifications"),
+    schedule: v.optional(notificationScheduleValidator),
+    body: v.optional(v.string()),
   }),
 );
 

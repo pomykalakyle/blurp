@@ -5,6 +5,7 @@ import { ABOUT_KYLE_SYSTEM, CHAT_MODEL } from "./constants";
 import {
   lookupArchivedLtgs,
   lookupResolvedGoals,
+  proposeAddGoalNotification,
   proposeArchiveLtg,
   proposeCreateEntry,
   proposeCreateGoal,
@@ -14,7 +15,9 @@ import {
   proposeEditEntry,
   proposeEditGoal,
   proposeEditLtg,
+  proposeRemoveGoalNotification,
   proposeResolveGoal,
+  proposeUpdateGoalNotification,
 } from "./tools";
 
 export const chatAgent: Agent = new Agent(components.agent, {
@@ -39,5 +42,8 @@ export const chatAgent: Agent = new Agent(components.agent, {
     propose_resolve_goal: proposeResolveGoal,
     propose_create_entry: proposeCreateEntry,
     propose_edit_entry: proposeEditEntry,
+    add_goal_notification: proposeAddGoalNotification,
+    remove_goal_notification: proposeRemoveGoalNotification,
+    update_goal_notification: proposeUpdateGoalNotification,
   },
 });

@@ -159,6 +159,12 @@ async function applyProposal(
     case "deleteGoal": {
       const target = await ctx.db.get(p.goalId);
       if (!target) return { applied: false, staleReason: "goal no longer exists" };
+      // Cascade: notifications belong to their subject and never outlive it.
+      const notifs = await ctx.db
+        .query("notifications")
+        .withIndex("by_goal", (q) => q.eq("subject.goalId", p.goalId))
+        .collect();
+      for (const n of notifs) await ctx.db.delete(n._id);
       await ctx.db.delete(p.goalId);
       return { applied: true };
     }
@@ -196,6 +202,12 @@ async function applyProposal(
         outcomeDate,
         notes: nextNotes,
       });
+      // Cascade: a closed-out goal stops producing pings.
+      const notifs = await ctx.db
+        .query("notifications")
+        .withIndex("by_goal", (q) => q.eq("subject.goalId", p.goalId))
+        .collect();
+      for (const n of notifs) await ctx.db.delete(n._id);
       return { applied: true };
     }
     // Legacy: historical cards from before propose_toggle_goal_state was
@@ -231,6 +243,41 @@ async function applyProposal(
       if (p.startDate !== undefined) patch.startDate = p.startDate;
       if (p.endDate !== undefined) patch.endDate = p.endDate;
       await ctx.db.patch(p.entryId, patch);
+      return { applied: true };
+    }
+    case "createNotification": {
+      const goal = await ctx.db.get(p.goalId);
+      if (!goal) return { applied: false, staleReason: "goal no longer exists" };
+      await ctx.db.insert("notifications", {
+        subject: { kind: "goal", goalId: p.goalId },
+        schedule: p.schedule,
+        body: p.body,
+        createdAt: Date.now(),
+      });
+      return { applied: true };
+    }
+    case "removeNotification": {
+      const row = await ctx.db.get(p.notificationId);
+      if (!row) return { applied: false, staleReason: "notification no longer exists" };
+      if (row.subject.kind !== "goal" || row.subject.goalId !== p.goalId) {
+        return { applied: false, staleReason: "notification does not belong to that goal" };
+      }
+      await ctx.db.delete(p.notificationId);
+      return { applied: true };
+    }
+    case "updateNotification": {
+      const row = await ctx.db.get(p.notificationId);
+      if (!row) return { applied: false, staleReason: "notification no longer exists" };
+      if (row.subject.kind !== "goal" || row.subject.goalId !== p.goalId) {
+        return { applied: false, staleReason: "notification does not belong to that goal" };
+      }
+      const patch: Record<string, unknown> = {};
+      if (p.schedule !== undefined) patch.schedule = p.schedule;
+      if (p.body !== undefined) patch.body = p.body;
+      if (Object.keys(patch).length === 0) {
+        return { applied: false, staleReason: "no fields to update" };
+      }
+      await ctx.db.patch(p.notificationId, patch);
       return { applied: true };
     }
   }
