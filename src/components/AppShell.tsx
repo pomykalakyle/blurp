@@ -132,7 +132,7 @@ export function AppShell(props: Props) {
                 <Plus size={14} /> New chat
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-2 pb-3">
+            <div className="flex-1 overflow-y-auto scroll-thin px-2 pb-3">
               <ChatList
                 currentThreadId={currentThreadId}
                 onSelect={(id) => {

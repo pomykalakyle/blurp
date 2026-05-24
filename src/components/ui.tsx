@@ -44,6 +44,15 @@ export function ThemeStyles() {
       textarea, input { font-family: inherit; }
       .scroll-hidden::-webkit-scrollbar { display: none; }
       .scroll-hidden { scrollbar-width: none; }
+      @media (min-width: 768px) {
+        .scroll-thin { scrollbar-width: thin; scrollbar-color: transparent transparent; transition: scrollbar-color 0.2s ease; }
+        .scroll-thin:hover { scrollbar-color: rgba(235, 231, 223, 0.2) transparent; }
+        .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+        .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+        .scroll-thin::-webkit-scrollbar-thumb { background-color: transparent; border-radius: 4px; transition: background-color 0.2s ease; }
+        .scroll-thin:hover::-webkit-scrollbar-thumb { background-color: rgba(235, 231, 223, 0.18); }
+        .scroll-thin::-webkit-scrollbar-thumb:hover { background-color: rgba(235, 231, 223, 0.3); }
+      }
       .narrative-textarea { line-height: 1.7; }
       .chat-message-content { line-height: 1.6; }
 
