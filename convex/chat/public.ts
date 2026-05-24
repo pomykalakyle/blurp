@@ -12,6 +12,8 @@ import { generateText } from "ai";
 import {
   action,
   internalAction,
+  internalMutation,
+  internalQuery,
   mutation,
   query,
 } from "../_generated/server";
@@ -22,6 +24,7 @@ import {
   CHAT_PROVIDER_OPTIONS,
   CHECK_IN_INSTRUCTIONS,
   CHECK_IN_KICKOFF,
+  SCOPED_CHECK_IN_INSTRUCTIONS,
   TITLE_MODEL,
   TITLE_PROVIDER_OPTIONS,
 } from "./constants";
@@ -202,6 +205,30 @@ export const createCheckInThread = mutation({
   },
 });
 
+// Called by the notification scheduler tick when a bundle of past-target
+// notifications fires. Creates the thread, records scope, lets the
+// caller schedule the opener (so it can return the threadId fast and
+// the push can be built immediately).
+export const createScopedCheckInThread = internalMutation({
+  args: { scopeGoalIds: v.array(v.id("goals")) },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    const threadId = await agentCreateThread(ctx, components.agent, {
+      userId: USER_ID,
+    });
+    await ctx.db.insert("chatThreadMeta", {
+      threadId,
+      kind: "goal_check_in",
+      scopeGoalIds: args.scopeGoalIds,
+    });
+    await updateThreadMetadata(ctx, components.agent, {
+      threadId,
+      patch: { title: `Check-in · ${pacificDate()}` },
+    });
+    return threadId;
+  },
+});
+
 async function listCheckInThreadIds(
   ctx: { db: import("../_generated/server").QueryCtx["db"] },
 ): Promise<Set<string>> {
@@ -255,6 +282,26 @@ export const getThreadKind = query({
       .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
       .unique();
     return meta?.kind ?? "regular";
+  },
+});
+
+// Internal: fetch the full meta (kind + scopeGoalIds) for an action
+// that needs to build the system context with scope.
+export const getThreadMetaInternal = internalQuery({
+  args: { threadId: v.string() },
+  returns: v.object({
+    kind: v.union(v.literal("regular"), v.literal("goal_check_in")),
+    scopeGoalIds: v.union(v.array(v.id("goals")), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const meta = await ctx.db
+      .query("chatThreadMeta")
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .unique();
+    return {
+      kind: meta?.kind ?? "regular",
+      scopeGoalIds: meta?.scopeGoalIds ?? null,
+    };
   },
 });
 
@@ -332,6 +379,7 @@ function formatLtgLine(l: Doc<"longTermGoals">): string {
 
 async function buildDynamicContext(
   ctx: { runQuery: import("../_generated/server").ActionCtx["runQuery"] },
+  opts: { scopeGoalIds?: string[] } = {},
 ): Promise<string> {
   const activeLtgs: Doc<"longTermGoals">[] = await ctx.runQuery(
     internal.chat.lookups.listActiveLtgs,
@@ -368,10 +416,16 @@ async function buildDynamicContext(
       ? "(none)"
       : activeLtgs.map(formatLtgLine).join("\n");
 
+  // For scoped check-ins, filter open goals to just the ones in scope.
+  // The agent only sees what's relevant to the bundle that pinged Kyle.
+  const filteredOpenGoals = opts.scopeGoalIds
+    ? openGoals.filter((g) => opts.scopeGoalIds!.includes(g._id))
+    : openGoals;
+
   const openGoalLines =
-    openGoals.length === 0
+    filteredOpenGoals.length === 0
       ? "(none)"
-      : openGoals
+      : filteredOpenGoals
           .map((g) =>
             formatGoalLine(g, activeLtgs, notificationsByGoal.get(g._id) ?? []),
           )
@@ -424,20 +478,27 @@ export const sendMessage = action({
       threadId: args.threadId,
     });
 
-    const kind: "regular" | "goal_check_in" = await ctx.runQuery(
-      api.chat.public.getThreadKind,
+    const meta = await ctx.runQuery(
+      internal.chat.public.getThreadMetaInternal,
       { threadId: args.threadId },
     );
 
-    const baseSystem = await buildDynamicContext(ctx);
+    const baseSystem = await buildDynamicContext(ctx, {
+      scopeGoalIds: meta.scopeGoalIds ?? undefined,
+    });
     const priorProposalsBlock = await buildPriorTurnProposalsBlock(
       ctx,
       args.threadId,
     );
-    const system =
-      (kind === "goal_check_in"
-        ? `${baseSystem}\n\n${CHECK_IN_INSTRUCTIONS}`
-        : baseSystem) + priorProposalsBlock;
+
+    let system = baseSystem;
+    if (meta.kind === "goal_check_in") {
+      system = `${system}\n\n${CHECK_IN_INSTRUCTIONS}`;
+      if (meta.scopeGoalIds && meta.scopeGoalIds.length > 0) {
+        system = `${system}\n\n${SCOPED_CHECK_IN_INSTRUCTIONS}`;
+      }
+    }
+    system = system + priorProposalsBlock;
 
     const result = await chatAgent.streamText(
       ctx,
@@ -486,6 +547,43 @@ export const openCheckInChat = internalAction({
         providerOptions: CHAT_PROVIDER_OPTIONS,
         onStepFinish: (step) => {
           console.log("[check-in open] step finished:", {
+            finishReason: step.finishReason,
+            textLength: step.text?.length ?? 0,
+          });
+        },
+      },
+      { saveStreamDeltas: { chunking: "word", throttleMs: 100 } },
+    );
+    await result.consumeStream();
+    return null;
+  },
+});
+
+// Same shape as openCheckInChat but builds the system context with
+// scopeGoalIds — the agent's open-goals view is filtered to just the
+// goals in scope, and the SCOPED_CHECK_IN_INSTRUCTIONS block tells it
+// to focus there. Called by the notification scheduler tick.
+export const openScopedCheckInChat = internalAction({
+  args: {
+    threadId: v.string(),
+    scopeGoalIds: v.array(v.id("goals")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const baseSystem = await buildDynamicContext(ctx, {
+      scopeGoalIds: args.scopeGoalIds,
+    });
+    const system = `${baseSystem}\n\n${CHECK_IN_INSTRUCTIONS}\n\n${SCOPED_CHECK_IN_INSTRUCTIONS}`;
+
+    const result = await chatAgent.streamText(
+      ctx,
+      { threadId: args.threadId },
+      {
+        prompt: CHECK_IN_KICKOFF,
+        system,
+        providerOptions: CHAT_PROVIDER_OPTIONS,
+        onStepFinish: (step) => {
+          console.log("[scoped check-in open] step finished:", {
             finishReason: step.finishReason,
             textLength: step.text?.length ?? 0,
           });

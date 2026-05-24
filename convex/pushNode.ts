@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import webpush from "web-push";
 
@@ -19,6 +19,58 @@ function configureWebPush(): void {
   }
   webpush.setVapidDetails(subject, publicKey, privateKey);
 }
+
+// Used by the notification scheduler tick: send a batch of pre-built
+// payloads. Each item carries its target endpoint + keys and the
+// already-encoded JSON payload. On 404/410 the dead subscription is
+// removed via the existing helper.
+export const sendBulk = internalAction({
+  args: {
+    items: v.array(
+      v.object({
+        endpoint: v.string(),
+        p256dh: v.string(),
+        auth: v.string(),
+        payload: v.string(),
+      }),
+    ),
+  },
+  returns: v.object({
+    sent: v.number(),
+    removed: v.number(),
+    failed: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    configureWebPush();
+    let sent = 0;
+    let removed = 0;
+    let failed = 0;
+    for (const item of args.items) {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: item.endpoint,
+            keys: { p256dh: item.p256dh, auth: item.auth },
+          },
+          item.payload,
+        );
+        sent += 1;
+      } catch (err: unknown) {
+        const statusCode = (err as { statusCode?: number }).statusCode;
+        if (statusCode === 404 || statusCode === 410) {
+          await ctx.runMutation(internal.push.removeByEndpoint, {
+            endpoint: item.endpoint,
+          });
+          removed += 1;
+        } else {
+          console.error("Push bulk send failed", { endpoint: item.endpoint, err });
+          failed += 1;
+        }
+      }
+    }
+    return { sent, removed, failed };
+  },
+});
 
 // Push A admin trigger: send a test notification to every registered
 // subscription. Removes any subscription the push service rejects with
