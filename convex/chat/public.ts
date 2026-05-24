@@ -33,8 +33,16 @@ type ProposalCard = Doc<"proposalCards">;
 function summarizeProposal(card: ProposalCard): string {
   const p = card.proposal;
   switch (p.kind) {
-    case "createGoal":
-      return `create goal "${p.title}" (${p.type})`;
+    case "createGoal": {
+      const notifCount = p.notifications?.length ?? 0;
+      const notifSuffix =
+        notifCount === 0
+          ? ""
+          : ` with ${notifCount} notification${notifCount === 1 ? "" : "s"}: ${p.notifications!
+              .map((n) => `${formatSchedule(n.schedule)} "${n.body}"`)
+              .join("; ")}`;
+      return `create goal "${p.title}" (${p.type})${notifSuffix}`;
+    }
     case "createLtg":
       return `create long-term goal "${p.title}"`;
     case "editGoal": {

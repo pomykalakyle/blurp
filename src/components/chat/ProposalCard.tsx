@@ -36,11 +36,18 @@ function summarize(
       ]
         .filter(Boolean)
         .join(" · ");
+      const notifLines = (proposal.notifications ?? []).map(
+        (n) => `• ${formatNotificationSchedule(n.schedule)} — "${n.body}"`,
+      );
+      const notifBlock =
+        notifLines.length > 0
+          ? `\n\nNotifications:\n${notifLines.join("\n")}`
+          : "";
       return {
         kindLabel: "Add goal",
         body: `"${proposal.title}"${meta ? ` — ${meta}` : ""}${
           proposal.description ? `\n${proposal.description}` : ""
-        }`,
+        }${notifBlock}`,
       };
     }
     case "createLtg":

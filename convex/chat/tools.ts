@@ -105,9 +105,48 @@ function makeProposeTool<I>(opts: {
   });
 }
 
+// Schedule input shape for notification tools. The agent expresses
+// one-off times as ISO datetime strings (any timezone-bearing form);
+// toScheduleStorage converts to a ms timestamp for storage. Daily times
+// are passed as HH:MM and interpreted as Pacific. Shared between the
+// per-entry notification tools and the notifications array on
+// propose_create_goal.
+const scheduleInputSchema = z.union([
+  z.object({
+    kind: z.literal("oneoff"),
+    at: z
+      .string()
+      .describe(
+        "ISO datetime when this notification should fire — include the timezone offset, e.g. '2026-05-25T09:00:00-07:00'. Use Pacific (-07:00 PDT / -08:00 PST) unless Kyle says otherwise.",
+      ),
+  }),
+  z.object({
+    kind: z.literal("daily"),
+    time: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .describe(
+        "Daily firing time as 24-hour HH:MM in Pacific — e.g. '08:00' or '19:30'. Re-fires every day until the goal's targetDate passes.",
+      ),
+  }),
+]);
+
+function toScheduleStorage(
+  input: z.infer<typeof scheduleInputSchema>,
+): { kind: "oneoff"; at: number } | { kind: "daily"; time: string } {
+  if (input.kind === "oneoff") {
+    const ms = Date.parse(input.at);
+    if (Number.isNaN(ms)) {
+      throw new Error(`Invalid ISO datetime for one-off notification: ${input.at}`);
+    }
+    return { kind: "oneoff", at: ms };
+  }
+  return { kind: "daily", time: input.time };
+}
+
 export const proposeCreateGoal = makeProposeTool({
   description:
-    "Propose adding a new goal to Kyle's list. Use when you want Kyle to consider tracking a new goal.",
+    "Propose adding a new goal to Kyle's list, with its notifications included. Use when you want Kyle to consider tracking a new goal. Every new goal should include at least one notification scheduled after its targetDate — that's the check-in that ensures the goal gets reviewed. Add reminder notifications too when they fit the goal (morning-of nudges, end-of-week pings, etc.). Goal and all its notifications land together when Kyle accepts.",
   inputSchema: z.object({
     title: z.string().describe("Short, action-oriented goal title."),
     type: goalTypeSchema.describe(
@@ -125,6 +164,20 @@ export const proposeCreateGoal = makeProposeTool({
       .string()
       .nullable()
       .describe("Optional ISO date — the target completion deadline."),
+    notifications: z
+      .array(
+        z.object({
+          schedule: scheduleInputSchema,
+          body: z
+            .string()
+            .describe(
+              "Plain-text message for the lock screen — conversational, specific to this entry.",
+            ),
+        }),
+      )
+      .describe(
+        "Notifications to create alongside the goal. Include at least one entry scheduled after targetDate (the runtime treats post-targetDate entries as check-ins). Add reminder entries (pre-targetDate) when they fit. Pass [] only if Kyle explicitly says he doesn't want any.",
+      ),
   }),
   toProposal: (input) => ({
     kind: "createGoal",
@@ -133,6 +186,10 @@ export const proposeCreateGoal = makeProposeTool({
     longTermGoalId: input.longTermGoalId ?? null,
     description: input.description ?? null,
     targetDate: input.targetDate ?? null,
+    notifications: input.notifications.map((n) => ({
+      schedule: toScheduleStorage(n.schedule),
+      body: n.body,
+    })),
   }),
 });
 
@@ -321,43 +378,6 @@ export const proposeEditEntry = makeProposeTool({
     ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
   }),
 });
-
-// Schedule input shape for notification tools. The agent expresses
-// one-off times as ISO datetime strings (any timezone-bearing form);
-// toProposal converts to a ms timestamp for storage. Daily times are
-// passed as HH:MM and interpreted as Pacific.
-const scheduleInputSchema = z.union([
-  z.object({
-    kind: z.literal("oneoff"),
-    at: z
-      .string()
-      .describe(
-        "ISO datetime when this notification should fire — include the timezone offset, e.g. '2026-05-25T09:00:00-07:00'. Use Pacific (-07:00 PDT / -08:00 PST) unless Kyle says otherwise.",
-      ),
-  }),
-  z.object({
-    kind: z.literal("daily"),
-    time: z
-      .string()
-      .regex(/^\d{2}:\d{2}$/)
-      .describe(
-        "Daily firing time as 24-hour HH:MM in Pacific — e.g. '08:00' or '19:30'. Re-fires every day until the goal's targetDate passes.",
-      ),
-  }),
-]);
-
-function toScheduleStorage(
-  input: z.infer<typeof scheduleInputSchema>,
-): { kind: "oneoff"; at: number } | { kind: "daily"; time: string } {
-  if (input.kind === "oneoff") {
-    const ms = Date.parse(input.at);
-    if (Number.isNaN(ms)) {
-      throw new Error(`Invalid ISO datetime for one-off notification: ${input.at}`);
-    }
-    return { kind: "oneoff", at: ms };
-  }
-  return { kind: "daily", time: input.time };
-}
 
 export const proposeAddGoalNotification = makeProposeTool({
   description:
