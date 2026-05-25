@@ -8,6 +8,7 @@ import {
 import { internal } from "../_generated/api";
 import { Doc } from "../_generated/dataModel";
 import { proposalValidator } from "./proposalValidator";
+import { applyResolveGoal } from "../goals";
 
 // Proposal kinds whose accept changes the notifications table — and
 // therefore should trigger the scheduler to re-plan its next fire.
@@ -93,11 +94,6 @@ export const dismiss = mutation({
 });
 
 type CardDoc = Doc<"proposalCards">;
-
-function appendNote(existing: string | null | undefined, append: string): string {
-  const e = (existing ?? "").trim();
-  return e ? `${e}\n\n${append}` : append;
-}
 
 async function applyProposal(
   ctx: { db: import("../_generated/server").MutationCtx["db"] },
@@ -206,32 +202,17 @@ async function applyProposal(
       return { applied: true };
     }
     case "resolveGoal": {
-      const target = await ctx.db.get(p.goalId);
-      if (!target) return { applied: false, staleReason: "goal no longer exists" };
-      if ((target.reviewedAt ?? null) !== null) {
-        return { applied: false, staleReason: "goal already closed out" };
-      }
       // Tolerate legacy shape from historical proposalCards rows.
       const reviewedAt = p.reviewedAt ?? p.resolvedAt;
       if (reviewedAt === undefined) {
         return { applied: false, staleReason: "resolve proposal missing reviewedAt" };
       }
-      const outcomeDate = p.outcomeDate ?? null;
-      const nextNotes = p.notesAppend
-        ? appendNote(target.notes ?? null, p.notesAppend)
-        : target.notes ?? null;
-      await ctx.db.patch(p.goalId, {
+      return await applyResolveGoal(ctx, {
+        goalId: p.goalId,
+        outcomeDate: p.outcomeDate ?? null,
         reviewedAt,
-        outcomeDate,
-        notes: nextNotes,
+        notesAppend: p.notesAppend,
       });
-      // Cascade: a closed-out goal stops producing pings.
-      const notifs = await ctx.db
-        .query("notifications")
-        .withIndex("by_goal", (q) => q.eq("subject.goalId", p.goalId))
-        .collect();
-      for (const n of notifs) await ctx.db.delete(n._id);
-      return { applied: true };
     }
     // Legacy: historical cards from before propose_toggle_goal_state was
     // retired. No new code emits these, but if a live card from before

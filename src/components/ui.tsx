@@ -101,6 +101,10 @@ export function ThemeStyles() {
 
       .icon-flag-fill { color: var(--c-danger-strong); fill: var(--c-danger-strong); }
 
+      .goal-tap-btn { cursor: pointer; transition: transform 0.1s ease; }
+      .goal-tap-btn:hover > div { border-color: var(--c-accent); background-color: var(--c-accent-tint); }
+      .goal-tap-btn:active { transform: scale(0.92); }
+
       .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 500; border-radius: 6px; transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
       .btn:disabled { opacity: 0.4; cursor: not-allowed; }
       .btn-primary { background-color: var(--c-accent); color: var(--c-accent-text); }

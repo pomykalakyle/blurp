@@ -38,7 +38,7 @@ export function CheckInScreen({ threadId, onNewCheckIn }: Props) {
 
       {/* Goals pane — desktop only */}
       <div className="hidden md:flex md:w-[420px] lg:w-[480px] flex-shrink-0 flex-col min-h-0 overflow-y-auto bg-base">
-        <GoalsScreen />
+        <GoalsScreen readOnly />
       </div>
     </div>
   );
