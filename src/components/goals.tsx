@@ -3,7 +3,7 @@ import { Check, ChevronDown, ChevronRight, Flag } from 'lucide-react';
 import { FONT_DISPLAY } from './ui';
 import { isGoalClosed, isGoalSuccess } from '../lib/core';
 
-export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, dragHandle = null, dimmed = false }) {
+export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, onResolve, dragHandle = null, dimmed = false }) {
   const successCount = goals.filter(isGoalSuccess).length;
 
   return (
@@ -21,7 +21,7 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, dragHandle =
           {goals.length === 0 ? (
             <div className="px-4 py-4 text-xs text-muted italic">No goals under this long-term goal yet.</div>
           ) : (
-            goals.map(g => <GoalRow key={g.id} goal={g} />)
+            goals.map(g => <GoalRow key={g.id} goal={g} onResolve={onResolve} />)
           )}
         </div>
       )}
@@ -29,19 +29,33 @@ export function LtgGroup({ ltg, goals, collapsed, onToggleCollapse, dragHandle =
   );
 }
 
-export function GoalRow({ goal, ltgLabel = null }) {
+export function GoalRow({ goal, ltgLabel = null, onResolve }) {
   const closed = isGoalClosed(goal);
   const success = isGoalSuccess(goal);
   // Strike-through any closed achievement (whether succeeded or failed)
   // and any avoidance that ended in success — they represent "done with."
   // Avoidance failures (slips) stay un-struck so the row reads as a flag.
   const struck = closed && (goal.type === 'achievement' || success);
+  // Tap-to-complete is achievement-only and only while open. Avoidance
+  // goals have no manual completion path — slips happen via chat.
+  const tappable = !closed && goal.type === 'achievement' && !!onResolve;
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-soft last:border-b-0 hover-bg-surface-soft transition-colors">
-      <div className="flex-shrink-0">
-        <GoalIcon goal={goal} />
-      </div>
+      {tappable ? (
+        <button
+          onClick={() => onResolve(goal)}
+          title="Mark complete"
+          aria-label="Mark complete"
+          className="flex-shrink-0 rounded-full goal-tap-btn"
+        >
+          <GoalIcon goal={goal} />
+        </button>
+      ) : (
+        <div className="flex-shrink-0">
+          <GoalIcon goal={goal} />
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <div className={`text-sm ${struck ? 'line-through' : ''}`} style={{ color: struck ? 'var(--c-text-faint)' : (success ? 'var(--c-text)' : 'var(--c-text-muted)') }}>
           {goal.title}

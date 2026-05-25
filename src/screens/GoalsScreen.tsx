@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Loader2, Plus } from 'lucide-react';
 import { FONT_DISPLAY } from '../components/ui';
 import { GoalRow, LtgGroup } from '../components/goals';
+import { ResolveGoalModal } from '../components/ResolveGoalModal';
 
 function compareUrgency(a, b) {
   const aDated = !!a.targetDate;
@@ -40,7 +41,7 @@ function sortGoalsForDisplay(goals, showResolved) {
   return showResolved ? [...open, ...closed] : open;
 }
 
-function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse }) {
+function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse, onResolve }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: ltg.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -66,13 +67,14 @@ function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse }) {
         goals={goals}
         collapsed={collapsed}
         onToggleCollapse={onToggleCollapse}
+        onResolve={onResolve}
         dragHandle={handle}
       />
     </div>
   );
 }
 
-export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
+export function GoalsScreen({ onNewChat, readOnly = false }: { onNewChat?: () => void; readOnly?: boolean } = {}) {
   const ltgsRaw = useQuery(api.longTermGoals.list);
   const goalsRaw = useQuery(api.goals.list);
   const reorderLtgs = useMutation(api.longTermGoals.reorder);
@@ -81,6 +83,8 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
   const [showResolvedB, setShowResolvedB] = useState(false);
   const [collapsed, setCollapsed] = useState({});
   const [activePane, setActivePane] = useState(0);
+  const [resolvingGoal, setResolvingGoal] = useState(null);
+  const onResolve = readOnly ? undefined : setResolvingGoal;
 
   const scrollerRef = useRef(null);
 
@@ -222,6 +226,7 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
               key={g.id}
               goal={g}
               ltgLabel={g.longTermGoalId ? ltgTitleById.get(g.longTermGoalId) ?? null : null}
+              onResolve={onResolve}
             />
           ))}
         </div>
@@ -261,6 +266,7 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
                       goals={ltgGoals}
                       collapsed={!!collapsed[ltg.id]}
                       onToggleCollapse={() => setCollapsed(c => ({ ...c, [ltg.id]: !c[ltg.id] }))}
+                      onResolve={onResolve}
                     />
                   );
                 })}
@@ -280,6 +286,7 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
                     goals={ltgGoals}
                     collapsed={collapsed[ltg.id] !== false}
                     onToggleCollapse={() => setCollapsed(c => ({ ...c, [ltg.id]: c[ltg.id] === false }))}
+                    onResolve={onResolve}
                     dimmed
                   />
                 );
@@ -331,6 +338,8 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
           <Plus size={24} />
         </button>
       </main>
+
+      <ResolveGoalModal goal={resolvingGoal} onClose={() => setResolvingGoal(null)} />
     </>
   );
 }
