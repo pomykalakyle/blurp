@@ -5,19 +5,21 @@ import {
   Menu,
   MessageSquare,
   Plus,
+  Settings,
   Target,
   X,
 } from "lucide-react";
 import { FONT_DISPLAY } from "./ui";
 import { ChatList } from "./chat/ChatList";
 
-export type Section = "goals" | "chat" | "narrative" | "checkIn";
+export type Section = "goals" | "chat" | "narrative" | "checkIn" | "settings";
 
 const SECTION_LABELS: Record<Section, string> = {
   goals: "Goals",
   chat: "Chat",
   narrative: "Narrative",
   checkIn: "Check-in",
+  settings: "Settings",
 };
 
 const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
@@ -25,6 +27,10 @@ const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
   { id: "chat", icon: MessageSquare },
   { id: "narrative", icon: BookOpen },
   { id: "goals", icon: Target },
+];
+
+const FOOTER_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
+  { id: "settings", icon: Settings },
 ];
 
 type Props = {
@@ -58,6 +64,13 @@ export function AppShell(props: Props) {
 
   const closeDrawer = () => onSetDrawerOpen(false);
   const selectSection = (s: Section) => {
+    // Land directly inside a fresh check-in when arriving from outside the
+    // section, instead of stopping at the empty "New check-in" prompt.
+    if (s === "checkIn" && activeSection !== "checkIn") {
+      onNewCheckIn();
+      closeDrawer();
+      return;
+    }
     onSelectSection(s);
     closeDrawer();
   };
@@ -170,6 +183,27 @@ export function AppShell(props: Props) {
             </div>
           </div>
         )}
+
+        <nav className="mt-auto px-3 py-3 border-t border-soft">
+          {FOOTER_ITEMS.map(({ id, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => selectSection(id)}
+              className={`
+                w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm
+                transition-colors
+                ${
+                  activeSection === id
+                    ? "bg-surface-2 text-cream"
+                    : "text-dim hover-bg-surface hover-text-cream"
+                }
+              `}
+            >
+              <Icon size={16} />
+              {SECTION_LABELS[id]}
+            </button>
+          ))}
+        </nav>
       </aside>
 
       {/* Main area */}

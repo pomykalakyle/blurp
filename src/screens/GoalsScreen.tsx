@@ -18,7 +18,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Loader2, Plus } from 'lucide-react';
 import { FONT_DISPLAY } from '../components/ui';
 import { GoalRow, LtgGroup } from '../components/goals';
-import { NotificationsSetup } from '../components/NotificationsSetup';
 
 function compareUrgency(a, b) {
   const aDated = !!a.targetDate;
@@ -313,8 +312,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
             />
           </div>
         </header>
-
-        <NotificationsSetup />
 
         <div
           ref={scrollerRef}
