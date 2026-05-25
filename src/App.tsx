@@ -6,6 +6,7 @@ import { GoalsScreen } from "./screens/GoalsScreen";
 import { ChatScreen } from "./screens/ChatScreen";
 import { NarrativeScreen } from "./screens/NarrativeScreen";
 import { CheckInScreen } from "./screens/CheckInScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import { api } from "../convex/_generated/api";
 
 // Read ?check-in=<threadId> / ?goal=<goalId> once at startup so a tap on
@@ -98,6 +99,7 @@ export default function App() {
             onNewCheckIn={handleNewCheckIn}
           />
         )}
+        {activeSection === "settings" && <SettingsScreen />}
       </AppShell>
     </div>
   );
