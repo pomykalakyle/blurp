@@ -67,7 +67,6 @@ function SortableLtgSection({ ltg, goals, collapsed, onToggleCollapse }) {
         collapsed={collapsed}
         onToggleCollapse={onToggleCollapse}
         dragHandle={handle}
-        readOnly
       />
     </div>
   );
@@ -223,7 +222,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
               key={g.id}
               goal={g}
               ltgLabel={g.longTermGoalId ? ltgTitleById.get(g.longTermGoalId) ?? null : null}
-              readOnly
             />
           ))}
         </div>
@@ -283,7 +281,6 @@ export function GoalsScreen({ onNewChat }: { onNewChat?: () => void } = {}) {
                     collapsed={collapsed[ltg.id] !== false}
                     onToggleCollapse={() => setCollapsed(c => ({ ...c, [ltg.id]: c[ltg.id] === false }))}
                     dimmed
-                    readOnly
                   />
                 );
               })}
