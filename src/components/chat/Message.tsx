@@ -22,7 +22,6 @@ type UIMessageLike = {
 type Props = {
   message: UIMessageLike;
   cards: CardDoc[];
-  threadKind: "regular" | "goal_check_in";
 };
 
 function isToolPart(type: string): boolean {
@@ -38,7 +37,7 @@ function isProposeTool(toolName: string): boolean {
   return toolName.startsWith("propose_");
 }
 
-export function Message({ message, cards, threadKind }: Props) {
+export function Message({ message, cards }: Props) {
   if (message.role === "tool" || message.role === "system") return null;
 
   if (message.role === "user") {
@@ -84,7 +83,7 @@ export function Message({ message, cards, threadKind }: Props) {
       {cards.length > 0 && (
         <div className="space-y-2 mt-1">
           {cards.map((c) => (
-            <ProposalCard key={c._id} card={c} threadKind={threadKind} />
+            <ProposalCard key={c._id} card={c} />
           ))}
         </div>
       )}
