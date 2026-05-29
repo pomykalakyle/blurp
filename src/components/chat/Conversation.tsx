@@ -87,6 +87,46 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
     return map;
   })();
 
+  // Auto-advance a check-in only once every proposal in a turn has been
+  // resolved (accepted or dismissed). Cards from one assistant turn share a
+  // promptMessageId; when a turn's last live card is resolved we fire the
+  // next-step sentinel. Driven by the cards query rather than the card's
+  // click handler, so it reacts to the resolution that just committed and
+  // never advances mid-turn (which used to expire the sibling cards).
+  const advancedTurns = useRef<Set<string>>(new Set());
+  const seededThreadId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!threadId || !cards || threadKind !== "goal_check_in") return;
+
+    const groups = new Map<string, Doc<"proposalCards">[]>();
+    for (const c of cards) {
+      const list = groups.get(c.promptMessageId) ?? [];
+      list.push(c);
+      groups.set(c.promptMessageId, list);
+    }
+
+    // On first load of a thread, treat every already-resolved turn as
+    // already-advanced so we never fire a stale advance for history.
+    if (seededThreadId.current !== threadId) {
+      const seeded = new Set<string>();
+      for (const [pid, list] of groups) {
+        if (!list.some((c) => c.status === "live")) seeded.add(pid);
+      }
+      advancedTurns.current = seeded;
+      seededThreadId.current = threadId;
+      return;
+    }
+
+    for (const [pid, list] of groups) {
+      if (advancedTurns.current.has(pid)) continue;
+      if (list.length > 0 && !list.some((c) => c.status === "live")) {
+        advancedTurns.current.add(pid);
+        void sendMessage({ threadId, prompt: CHECK_IN_NEXT_TEXT });
+      }
+    }
+  }, [threadId, cards, threadKind, sendMessage]);
+
   const handleSend = async (text: string) => {
     setSendError(null);
     setSending(true);
@@ -209,7 +249,6 @@ export function Conversation({ threadId, onThreadCreated }: Props) {
                   key={m.key}
                   message={m as never}
                   cards={cardsForMessage}
-                  threadKind={threadKind ?? "regular"}
                 />
               );
             });
