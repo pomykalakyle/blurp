@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blurp Proactive Goal Agent - Product Behavior</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --panel: #141820;
+      --panel-2: #10141b;
+      --text: #eef2f6;
+      --muted: #a8b3c2;
+      --quiet: #748196;
+      --line: #283140;
+      --accent: #75c7b7;
+      --accent-2: #e2b86b;
+      --bad: #ee8b8b;
+      --good: #98d18f;
+      --code: #d8dee9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 24px 56px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 22px;
+      margin-bottom: 28px;
+    }
+
+    .kicker {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .summary {
+      max-width: 860px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .doc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 230px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    nav {
+      position: sticky;
+      top: 20px;
+      width: 230px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 14px;
+    }
+
+    nav h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--quiet);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    nav a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 0;
+      font-size: 14px;
+      border-top: 1px solid transparent;
+    }
+
+    nav a.subnav {
+      padding: 3px 0 3px 14px;
+      font-size: 12px;
+      color: var(--quiet);
+    }
+
+    nav a.subnav + a:not(.subnav) {
+      margin-top: 8px;
+    }
+
+    nav a:hover {
+      color: var(--text);
+    }
+
+    main > div {
+      counter-reset: section;
+    }
+
+    section {
+      counter-increment: section;
+      counter-reset: subsection;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    section > h2::before {
+      content: counter(section) ". ";
+      color: var(--accent);
+    }
+
+    h3 {
+      margin: 22px 0 8px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+
+    .subsection {
+      counter-increment: subsection;
+      border-top: 1px solid var(--line);
+      margin-top: 20px;
+      padding-top: 18px;
+    }
+
+    .subsection:first-of-type {
+      border-top: 0;
+      margin-top: 0;
+      padding-top: 0;
+    }
+
+    .subsection > h3 {
+      margin-top: 0;
+      font-size: 18px;
+      color: var(--text);
+    }
+
+    .subsection > h3::before {
+      content: counter(section) "." counter(subsection) " ";
+      color: var(--accent);
+    }
+
+    h4 {
+      margin: 18px 0 7px;
+      color: var(--text);
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    p {
+      margin: 0 0 13px;
+      color: var(--muted);
+    }
+
+    strong {
+      color: var(--text);
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .principle {
+      border-left: 2px solid var(--accent);
+      padding: 1px 0 1px 10px;
+      margin: 8px 0 13px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .callout {
+      border: 1px solid rgba(117, 199, 183, 0.45);
+      background: rgba(117, 199, 183, 0.08);
+      border-radius: 8px;
+      padding: 15px;
+      color: var(--muted);
+      margin: 14px 0;
+    }
+
+    .warning {
+      border-color: rgba(238, 139, 139, 0.42);
+      background: rgba(238, 139, 139, 0.08);
+    }
+
+    .sequence {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 14px;
+    }
+
+    .num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #20302f;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .step h3 {
+      margin: 0 0 5px;
+    }
+
+    .step p {
+      margin-bottom: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    code {
+      color: var(--code);
+      background: #0a0f16;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.94em;
+    }
+
+    .status {
+      display: inline-block;
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #07110f;
+      background: var(--accent);
+    }
+
+    .status.later {
+      background: var(--accent-2);
+    }
+
+    .status.no {
+      background: var(--bad);
+    }
+
+    .status.yes {
+      background: var(--good);
+    }
+
+    footer {
+      color: var(--quiet);
+      border-top: 1px solid var(--line);
+      margin-top: 26px;
+      padding-top: 18px;
+      font-size: 13px;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        position: static;
+        order: -1;
+        width: fit-content;
+        min-width: 230px;
+        max-width: 100%;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 24px 14px 40px;
+      }
+
+      h1 {
+        font-size: 29px;
+      }
+
+      section {
+        padding: 17px;
+      }
+
+      nav {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .step {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="kicker">Product behavior</div>
+      <h1>Blurp Proactive Goal Agent</h1>
+      <p class="summary">
+        Blurp should stop acting like a passive goal ledger. It should become an active thinking partner that notices drift, finds useful openings, follows up when timing matters, and learns what actually helps Kyle move toward the goals he cares about.
+      </p>
+      <div class="doc-meta">
+        <span class="tag">Date: 2026-05-31</span>
+        <span class="tag">Status: Product direction draft</span>
+        <span class="tag">Scope: user-facing behavior</span>
+      </div>
+    </header>
+
+    <main>
+      <div>
+        <section id="product-direction">
+          <h2>Product Direction</h2>
+          <div class="subsection" id="thesis">
+            <h3>Active Goal-Seeking</h3>
+            <p>
+              Blurp should act like a second brain focused on helping Kyle reach his goals. It should carry some of the noticing, remembering, researching, following up, and strategy adjustment that Kyle would otherwise have to do alone.
+            </p>
+            <p>
+              The product should keep thinking about how to help even when Kyle is not actively driving the conversation. Blurp is an active participant in goal progress; when it reaches out, it should feel like something has been paying attention on Kyle's behalf.
+            </p>
+          </div>
+
+          <div class="subsection" id="deprecated">
+            <h3>Model Shift</h3>
+            <p>
+              This direction replaces the current notification model. Blurp moves away from goal-owned notification schedules and toward recurring background thinking where the agent decides how to help from the current situation.
+            </p>
+            <div class="grid">
+              <div class="card">
+                <h3>Functionality being removed</h3>
+                <ul>
+                  <li>Per-goal notification schedules.</li>
+                  <li>Required post-deadline pings for every new goal.</li>
+                  <li>Reminder/check-in behavior driven mechanically by a deadline.</li>
+                  <li>Assistant behavior centered on choosing notification timings for new goals.</li>
+                </ul>
+                <h4>Functionality not being removed</h4>
+                <ul>
+                  <li>Long-term goals and short-term goals remain part of the product.</li>
+                  <li>Goal dates, outcomes, notes, and changes remain part of the goal landscape Blurp reasons from.</li>
+                  <li>Kyle can still use goals to name what he is trying to move toward.</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>Replacement behavior</h3>
+                <ul>
+                  <li>Heartbeat runs and contextual runs give Blurp recurring chances to think and decide what, if anything, to do.</li>
+                  <li>The agent learns what helps Kyle move toward his goals.</li>
+                  <li>Blurp builds a psychological model of Kyle oriented around helping him move toward the goals he cares about.</li>
+                  <li>Proactive contact appears as a normal chat thread and phone ping.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="run-scheduling">
+          <h2>Run Scheduling</h2>
+          <div class="subsection" id="heartbeat-runs">
+            <h3>Heartbeat Runs</h3>
+            <p>
+              Blurp starts with three regular agent runs each day. These are scheduled chances for the agent to think, independent of any individual goal deadline.
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Run time</th>
+                  <th>Cadence note</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>8:30am Eastern</td>
+                  <td>Chosen because Kyle is often at the dog park and free enough to read something.</td>
+                </tr>
+                <tr>
+                  <td>1:30pm Eastern</td>
+                  <td>Default daily run slot.</td>
+                </tr>
+                <tr>
+                  <td>6:30pm Eastern</td>
+                  <td>Default daily run slot before Kyle's sleep window.</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="callout">
+              These times are defaults. Blurp can adjust the schedule as it learns when agent runs are useful.
+            </div>
+          </div>
+
+          <div class="subsection" id="contextual-runs">
+            <h3>Contextual Runs</h3>
+            <p>
+              Blurp can schedule runs outside the daily heartbeat cadence. These runs have a specific time and a short piece of context explaining why the agent is running then.
+            </p>
+            <p>
+              The context can come from conversation, goals, outside events, or the agent's own prior work. It gives Blurp the right starting point when that run begins.
+            </p>
+            <ul>
+              <li>Run after Kyle expects to be back from a date, with the date as context.</li>
+              <li>Run near the time of a local-government event, with the event link or description as context.</li>
+              <li>Run before an opportunity window closes, with the relevant goal and deadline as context.</li>
+              <li>Run to revisit an event schedule Blurp has been tracking, with the reason it might matter to Kyle as context.</li>
+            </ul>
+          </div>
+
+          <div class="subsection" id="creating-contextual-runs">
+            <h3>Creating Contextual Runs</h3>
+            <p>
+              Blurp has a run-scheduling capability available from ordinary chats and from agent runs. To create a contextual run, the agent gives the system a time and a text context for why that future run should exist.
+            </p>
+            <p>
+              The scheduling capability includes a context field. The agent writes the handoff text for the future run there, so the future agent knows what situation it is being asked to continue.
+            </p>
+          </div>
+        </section>
+
+        <section id="agent-run-functionality">
+          <h2>Agent Run Flow</h2>
+          <p>
+            This section is organized as the functional flow of an agent run. Read 3.1 through 3.4 as the product-level sequence Blurp follows during a run, while leaving the internal execution model to the technical design.
+          </p>
+          <div class="subsection" id="orient-run-context">
+            <h3>Start From Run Context</h3>
+            <p>
+              Each run starts from the reason it exists. A heartbeat run has broad responsibility for Kyle's current goal landscape. A contextual run starts from its attached context: an event, date, deadline, opportunity window, prior thought, or other scheduled reason.
+            </p>
+            <p>
+              The run's job is to improve the odds of progress from that starting point.
+            </p>
+          </div>
+
+          <div class="subsection" id="learn-recent-activity">
+            <h3>Learn From Recent Activity</h3>
+            <h4>Run scope</h4>
+            <p>
+              Heartbeat runs review recent activity that is ready to become durable learning: new or changed chats, goal outcomes, narrative entries, and other relevant app context.
+            </p>
+            <p>
+              Contextual runs stay focused on their attached context. They can update learning related to that context, while broad review of unrelated activity belongs to heartbeat runs.
+            </p>
+            <h4>What Blurp learns</h4>
+            <p>
+              Blurp builds a psychological model of Kyle so it can understand him well enough to help. This includes preferences, motivation, friction, timing, tone, recurring patterns, and the situations where Kyle tends to engage, avoid, stall, or follow through.
+            </p>
+            <p>
+              Blurp also learns what works. It tracks which kinds of help actually move Kyle toward his goals: useful timing, effective follow-up, helpful research, good questions, bad interruptions, successful reframes, and strategies that made progress more likely.
+            </p>
+            <p>
+              These two forms of learning inform each other. The psychological model helps Blurp choose better strategies, and the results of those strategies update what Blurp understands about Kyle. Both are oriented around helping Kyle move toward the goals he cares about.
+            </p>
+            <p>
+              Natural-language steering is part of recent activity. When Kyle corrects Blurp, asks it to slow down, tells it to stop pursuing a topic, replies later, stays silent, shows interest, says a message was useful or annoying, or changes how he wants the agent to behave, Blurp carries that forward into future runs, contact decisions, and its internal model of Kyle.
+            </p>
+            <p>
+              When a goal outcome or follow-through pattern is informative, Blurp can treat it as a retrospective: understand what happened, update its strategy, and carry the learning into future runs.
+            </p>
+          </div>
+
+          <div class="subsection" id="work-goal-problem">
+            <h3>Pursue Goal Progress</h3>
+            <p>
+              During this phase, Blurp works through what would make progress more likely. This is the agentic work session inside the run: Blurp has a purpose and context, but its exact path emerges from what it discovers while working.
+            </p>
+            <p>
+              Blurp can reason, revise its strategy, and continue exploring as the situation develops. It also has tools available during this phase, including capabilities such as researching outside information, inspecting available app context, scheduling another run, or using other useful tools added over time.
+            </p>
+            <p>
+              The work can be iterative. Blurp might research an event, learn that it is more relevant than expected, then decide to involve Kyle. Or it might investigate an opportunity and carry what it learned forward for a better moment.
+            </p>
+          </div>
+
+          <div class="subsection" id="contact-kyle">
+            <h3>Contact Kyle When Useful</h3>
+            <p>
+              If a run needs Kyle's attention, Blurp creates a normal chat thread in the existing chat list and sends a phone notification that opens it. The opening message should fit what the run found useful to say in that moment, such as a question, finding, proposed direction, follow-up, or another useful form of contact.
+            </p>
+            <p>
+              Contact is one possible action during a run. Blurp reaches out when, based on the reason for the run, what it found while working, Kyle's goals, and what it has learned about how to help him, involving Kyle seems likely to help him move toward a goal, clarify something the agent cannot resolve alone, or preserve useful momentum. A run can also save learning, schedule another run, continue working, or let the thread of work rest.
+            </p>
+            <p>
+              Blurp's contact judgment improves from Kyle's reactions. If Kyle responds better at certain times, ignores certain kinds of outreach, or says a kind of contact is annoying, future runs should use that learning when deciding whether and how to contact him.
+            </p>
+            <p>
+              The thread behaves like any other chat. Kyle can reply, ignore it, accept proposals, dismiss proposals, or steer it somewhere else in natural language, and Blurp can learn from what happens afterward.
+            </p>
+          </div>
+        </section>
+
+        <section id="out-of-scope">
+          <h2>Out of Scope</h2>
+          <p>
+            The exact model for storing Blurp's learnings about Kyle belongs in a separate technical design. That document should cover the memory system, chat-history search, psychological-model storage, update mechanics, and retrieval behavior that support the product behavior described here.
+          </p>
+          <p>
+            The technical design should also decide how the learning phase and goal-progress phase are orchestrated internally, including whether they run as one agent, separate agents, or another execution structure.
+          </p>
+        </section>
+      </div>
+
+      <nav aria-label="Document sections">
+        <h2>Sections</h2>
+        <a href="#product-direction">Product Direction</a>
+        <a class="subnav" href="#thesis">1.1 Active Goal-Seeking</a>
+        <a class="subnav" href="#deprecated">1.2 Model Shift</a>
+        <a href="#run-scheduling">Run Scheduling</a>
+        <a class="subnav" href="#heartbeat-runs">2.1 Heartbeat Runs</a>
+        <a class="subnav" href="#contextual-runs">2.2 Contextual Runs</a>
+        <a class="subnav" href="#creating-contextual-runs">2.3 Creating Contextual Runs</a>
+        <a href="#agent-run-functionality">Agent Run Flow</a>
+        <a class="subnav" href="#orient-run-context">3.1 Start From Run Context</a>
+        <a class="subnav" href="#learn-recent-activity">3.2 Learn From Recent Activity</a>
+        <a class="subnav" href="#work-goal-problem">3.3 Pursue Goal Progress</a>
+        <a class="subnav" href="#contact-kyle">3.4 Contact Kyle When Useful</a>
+        <a href="#out-of-scope">Out of Scope</a>
+      </nav>
+    </main>
+
+    <footer>
+      Product behavior artifact for Blurp. Technical design, schema, scheduling mechanics, and migration plan belong in a separate document.
+    </footer>
+  </div>
+</body>
+</html>
