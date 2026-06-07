@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import {
+  Activity,
   BookOpen,
   ClipboardCheck,
   Menu,
@@ -12,13 +13,20 @@ import {
 import { FONT_DISPLAY } from "./ui";
 import { ChatList } from "./chat/ChatList";
 
-export type Section = "goals" | "chat" | "narrative" | "checkIn" | "settings";
+export type Section =
+  | "goals"
+  | "chat"
+  | "narrative"
+  | "checkIn"
+  | "agentRuns"
+  | "settings";
 
 const SECTION_LABELS: Record<Section, string> = {
   goals: "Goals",
   chat: "Chat",
   narrative: "Narrative",
   checkIn: "Check-in",
+  agentRuns: "Agent Runs",
   settings: "Settings",
 };
 
@@ -27,6 +35,7 @@ const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
   { id: "chat", icon: MessageSquare },
   { id: "narrative", icon: BookOpen },
   { id: "goals", icon: Target },
+  { id: "agentRuns", icon: Activity },
 ];
 
 const FOOTER_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
