@@ -4,6 +4,11 @@ import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 
 type ProposedResult = { proposed: true };
+type ScheduledContextualRunResult = {
+  scheduled: true;
+  agentRunId: string;
+  runAt: number;
+};
 type LtgLookupResult = {
   id: string;
   title: string;
@@ -104,6 +109,45 @@ function makeProposeTool<I>(opts: {
     },
   });
 }
+
+function makeScheduleContextualRunTool(sourceType: "ordinary_chat" | "agent_run") {
+  return createTool({
+    description:
+      "Schedule a future contextual agent run. Use when a later moment has useful context for helping Kyle move toward his goals. This acts immediately and does not create a proposal card.",
+    inputSchema: z.object({
+      runAt: z
+        .string()
+        .describe(
+          "ISO datetime when the contextual run should start. Include the timezone offset, e.g. '2026-06-02T19:45:00-04:00'.",
+        ),
+      context: z
+        .string()
+        .describe(
+          "Handoff text for the future agent run: why the run exists, what situation it should continue from, and any goal-specific context it needs.",
+        ),
+    }),
+    execute: async (ctx, input): Promise<ScheduledContextualRunResult> => {
+      const result = await ctx.runMutation(
+        internal.agentRuns.scheduleContextual,
+        {
+          runAt: input.runAt,
+          handoffContext: input.context,
+          sourceType,
+        },
+      );
+      return {
+        scheduled: true,
+        agentRunId: result.agentRunId,
+        runAt: result.runAt,
+      };
+    },
+  });
+}
+
+export const scheduleContextualRunFromChat =
+  makeScheduleContextualRunTool("ordinary_chat");
+export const scheduleContextualRunFromAgent =
+  makeScheduleContextualRunTool("agent_run");
 
 // Schedule input shape for notification tools. The agent expresses
 // one-off times as ISO datetime strings (any timezone-bearing form);

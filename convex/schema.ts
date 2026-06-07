@@ -76,6 +76,26 @@ export default defineSchema({
     scopeGoalIds: v.optional(v.array(v.id("goals"))),
   }).index("by_threadId", ["threadId"]),
 
+  agentRuns: defineTable({
+    kind: v.union(v.literal("heartbeat"), v.literal("contextual")),
+    status: v.union(
+      v.literal("scheduled"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("canceled"),
+    ),
+    runAt: v.number(),
+    scheduledFunctionId: v.union(v.id("_scheduled_functions"), v.null()),
+    handoffContext: v.union(v.string(), v.null()),
+    sourceType: v.union(
+      v.literal("heartbeat_planner"),
+      v.literal("ordinary_chat"),
+      v.literal("agent_run"),
+    ),
+    agentThreadId: v.string(),
+  }).index("by_status_and_runAt", ["status", "runAt"]),
+
   // Singleton: tracks the currently-in-flight notification scheduler
   // job. At most one row exists. Used so replan can cancel the pending
   // job safely when the set of pending notifications changes.

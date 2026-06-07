@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as agentRuns from "../agentRuns.js";
 import type * as chat_agent from "../chat/agent.js";
 import type * as chat_constants from "../chat/constants.js";
 import type * as chat_dates from "../chat/dates.js";
@@ -23,6 +24,7 @@ import type * as narrativeEntries from "../narrativeEntries.js";
 import type * as notifications from "../notifications.js";
 import type * as notificationsScheduler from "../notificationsScheduler.js";
 import type * as ping from "../ping.js";
+import type * as proactiveAgent from "../proactiveAgent.js";
 import type * as push from "../push.js";
 import type * as pushNode from "../pushNode.js";
 
@@ -33,6 +35,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  agentRuns: typeof agentRuns;
   "chat/agent": typeof chat_agent;
   "chat/constants": typeof chat_constants;
   "chat/dates": typeof chat_dates;
@@ -48,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   notificationsScheduler: typeof notificationsScheduler;
   ping: typeof ping;
+  proactiveAgent: typeof proactiveAgent;
   push: typeof push;
   pushNode: typeof pushNode;
 }>;
