@@ -6,6 +6,7 @@ import { Doc, Id } from "../../convex/_generated/dataModel";
 import { FONT_DISPLAY } from "../components/ui";
 
 type AgentRun = Doc<"agentRuns">;
+type TraceMessage = Record<string, any>;
 
 function formatDateTime(ms: number): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -92,9 +93,295 @@ function RunListItem({
 
 function JsonBlock({ value }: { value: unknown }) {
   return (
-    <pre className="scroll-thin max-h-96 overflow-auto rounded-md border border-soft bg-base/70 p-3 text-[11px] leading-relaxed text-dim">
+    <pre className="scroll-thin max-h-96 overflow-auto rounded-md border border-soft bg-base/70 p-3 text-[11px] leading-relaxed text-dim whitespace-pre-wrap">
       {JSON.stringify(value, null, 2)}
     </pre>
+  );
+}
+
+function valueToText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value, null, 2);
+}
+
+function getContentParts(message: TraceMessage): unknown[] {
+  const content = message.message?.content;
+  if (Array.isArray(content)) return content;
+  if (content !== undefined && content !== null) return [content];
+  if (message.text) return [message.text];
+  return [];
+}
+
+function getRole(message: TraceMessage): string {
+  return message.message?.role ?? (message.tool ? "tool" : "message");
+}
+
+function getToolName(part: any, message: TraceMessage): string {
+  return (
+    part?.toolName ??
+    part?.tool_name ??
+    part?.name ??
+    message.message?.toolName ??
+    message.toolName ??
+    "tool"
+  );
+}
+
+function isToolCallPart(part: any): boolean {
+  if (!part || typeof part !== "object") return false;
+  const type = String(part.type ?? "");
+  return (
+    type.includes("tool-call") ||
+    type.includes("tool_call") ||
+    Boolean(part.toolCallId && (part.args || part.input || part.toolName))
+  );
+}
+
+function isToolResultPart(part: any): boolean {
+  if (!part || typeof part !== "object") return false;
+  const type = String(part.type ?? "");
+  return (
+    type.includes("tool-result") ||
+    type.includes("tool_result") ||
+    Boolean(part.toolCallId && (part.result || part.output))
+  );
+}
+
+function TraceTextBlock({ title, value }: { title: string; value: unknown }) {
+  const text = valueToText(value);
+  if (!text) return null;
+  return (
+    <div className="rounded-md border border-soft bg-base/45 p-3">
+      <div className="mb-2 text-[11px] font-medium uppercase tracking-widest text-faint">
+        {title}
+      </div>
+      <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-dim">
+        {text}
+      </div>
+    </div>
+  );
+}
+
+function TraceObjectBlock({ title, value }: { title: string; value: unknown }) {
+  if (value === null || value === undefined) return null;
+  return (
+    <div className="rounded-md border border-soft bg-base/45 p-3">
+      <div className="mb-2 text-[11px] font-medium uppercase tracking-widest text-faint">
+        {title}
+      </div>
+      {typeof value === "string" ? (
+        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-dim">
+          {value}
+        </div>
+      ) : (
+        <JsonBlock value={value} />
+      )}
+    </div>
+  );
+}
+
+function ReasoningBlock({ part }: { part: any }) {
+  const encrypted = part.providerOptions?.openai?.reasoningEncryptedContent;
+  const itemId = part.providerOptions?.openai?.itemId;
+  return (
+    <div className="rounded-md border border-soft bg-base/45 p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-widest text-faint">
+          Reasoning
+        </span>
+        {itemId && (
+          <span className="rounded bg-surface-2 px-2 py-0.5 text-[11px] text-muted">
+            {itemId}
+          </span>
+        )}
+      </div>
+      {part.text ? (
+        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-dim">
+          {part.text}
+        </div>
+      ) : encrypted ? (
+        <div className="text-sm text-muted">
+          Encrypted reasoning saved by the provider.
+        </div>
+      ) : (
+        <JsonBlock value={part} />
+      )}
+    </div>
+  );
+}
+
+function ToolCallBlock({
+  part,
+  message,
+}: {
+  part: any;
+  message: TraceMessage;
+}) {
+  const toolName = getToolName(part, message);
+  const args = part.args ?? part.input;
+  return (
+    <div className="rounded-md border border-accent bg-accent-tint p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-widest text-accent-strong">
+          Tool call
+        </span>
+        <span className="rounded bg-surface-2 px-2 py-0.5 text-xs text-cream">
+          {toolName}
+        </span>
+        {part.toolCallId && (
+          <span className="break-all text-[11px] text-muted">
+            {part.toolCallId}
+          </span>
+        )}
+      </div>
+      <TraceObjectBlock title="Arguments" value={args} />
+    </div>
+  );
+}
+
+function ToolResultBlock({
+  part,
+  message,
+}: {
+  part: any;
+  message: TraceMessage;
+}) {
+  const toolName = getToolName(part, message);
+  const result = part.result ?? part.output ?? part.content ?? message.message?.content;
+  return (
+    <div className="rounded-md border border-success bg-success-tint-soft p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-widest text-success-strong">
+          Tool result
+        </span>
+        <span className="rounded bg-surface-2 px-2 py-0.5 text-xs text-cream">
+          {toolName}
+        </span>
+        {part.toolCallId && (
+          <span className="break-all text-[11px] text-muted">
+            {part.toolCallId}
+          </span>
+        )}
+      </div>
+      <TraceObjectBlock title="Result" value={result} />
+    </div>
+  );
+}
+
+function TracePart({
+  part,
+  message,
+}: {
+  part: unknown;
+  message: TraceMessage;
+}) {
+  if (typeof part === "string") {
+    return <TraceTextBlock title="Text" value={part} />;
+  }
+  if (!part || typeof part !== "object") {
+    return <TraceObjectBlock title="Value" value={part} />;
+  }
+
+  const typedPart = part as any;
+  if (typedPart.type === "reasoning") return <ReasoningBlock part={typedPart} />;
+  if (isToolCallPart(typedPart)) {
+    return <ToolCallBlock part={typedPart} message={message} />;
+  }
+  if (isToolResultPart(typedPart)) {
+    return <ToolResultBlock part={typedPart} message={message} />;
+  }
+  if (typedPart.type === "text" && typedPart.text) {
+    return <TraceTextBlock title="Text" value={typedPart.text} />;
+  }
+
+  return <TraceObjectBlock title={typedPart.type ?? "Content"} value={typedPart} />;
+}
+
+function UsageSummary({ message }: { message: TraceMessage }) {
+  const items = [
+    message.model ? ["Model", message.model] : null,
+    message.provider ? ["Provider", message.provider] : null,
+    message.finishReason ? ["Finish", message.finishReason] : null,
+    message.usage?.totalTokens ? ["Tokens", message.usage.totalTokens] : null,
+  ].filter(Boolean) as Array<[string, string | number]>;
+
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted">
+      {items.map(([label, value]) => (
+        <span key={label} className="rounded-md bg-surface-2 px-2 py-1">
+          {label}: {value}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TraceMessageCard({
+  message,
+  index,
+}: {
+  message: TraceMessage;
+  index: number;
+}) {
+  const parts = getContentParts(message);
+  const role = getRole(message);
+  const isToolResultMessage = role === "tool" && parts.length === 1;
+
+  return (
+    <li className="rounded-lg border border-soft bg-base/35 p-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-md bg-surface-2 px-2 py-1 font-medium text-cream">
+          #{index + 1}
+        </span>
+        <span className="rounded-md bg-surface-2 px-2 py-1 text-dim">
+          {role}
+        </span>
+        {typeof message.tool === "boolean" && (
+          <span className="rounded-md bg-surface-2 px-2 py-1 text-dim">
+            tool: {String(message.tool)}
+          </span>
+        )}
+        {message.status && (
+          <span className="rounded-md bg-surface-2 px-2 py-1 text-dim">
+            {message.status}
+          </span>
+        )}
+        {message._creationTime && (
+          <span className="ml-auto text-faint">
+            {formatDateTime(message._creationTime)}
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {isToolResultMessage ? (
+          <ToolResultBlock part={{ content: parts[0] }} message={message} />
+        ) : parts.length > 0 ? (
+          parts.map((part, partIndex) => (
+            <TracePart
+              key={`${message._id ?? index}-${partIndex}`}
+              part={part}
+              message={message}
+            />
+          ))
+        ) : (
+          <TraceTextBlock title="Text" value={message.text} />
+        )}
+      </div>
+
+      <UsageSummary message={message} />
+
+      <details className="mt-3 rounded-md border border-soft bg-base/30">
+        <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-muted hover-text-cream">
+          Raw message
+        </summary>
+        <div className="border-t border-soft p-3">
+          <JsonBlock value={message} />
+        </div>
+      </details>
+    </li>
   );
 }
 
@@ -206,38 +493,12 @@ function TracePanel({ runId }: { runId: Id<"agentRuns"> | null }) {
           </div>
         ) : (
           <ol className="space-y-3">
-            {messages.map((message: any, index: number) => (
-              <li
+            {messages.map((message: TraceMessage, index: number) => (
+              <TraceMessageCard
                 key={message._id ?? index}
-                className="rounded-lg border border-soft bg-base/35 p-3"
-              >
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-md bg-surface-2 px-2 py-1 font-medium text-cream">
-                    #{index + 1}
-                  </span>
-                  {message.message?.role && (
-                    <span className="rounded-md bg-surface-2 px-2 py-1 text-dim">
-                      {message.message.role}
-                    </span>
-                  )}
-                  {typeof message.tool === "boolean" && (
-                    <span className="rounded-md bg-surface-2 px-2 py-1 text-dim">
-                      tool: {String(message.tool)}
-                    </span>
-                  )}
-                  {message.status && (
-                    <span className="rounded-md bg-surface-2 px-2 py-1 text-dim">
-                      {message.status}
-                    </span>
-                  )}
-                  {message._creationTime && (
-                    <span className="ml-auto text-faint">
-                      {formatDateTime(message._creationTime)}
-                    </span>
-                  )}
-                </div>
-                <JsonBlock value={message} />
-              </li>
+                message={message}
+                index={index}
+              />
             ))}
           </ol>
         )}
