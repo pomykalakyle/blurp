@@ -8,6 +8,7 @@ import {
   internalAction,
   internalQuery,
   internalMutation,
+  query,
 } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import {
@@ -39,6 +40,62 @@ const runnableRunValidator = v.object({
   handoffContext: v.union(v.string(), v.null()),
   sourceType: sourceTypeValidator,
   agentThreadId: v.string(),
+});
+
+const agentRunViewValidator = v.object({
+  _id: v.id("agentRuns"),
+  _creationTime: v.number(),
+  kind: v.union(v.literal("heartbeat"), v.literal("contextual")),
+  status: runStatusValidator,
+  runAt: v.number(),
+  scheduledFunctionId: v.union(v.id("_scheduled_functions"), v.null()),
+  handoffContext: v.union(v.string(), v.null()),
+  sourceType: sourceTypeValidator,
+  agentThreadId: v.string(),
+});
+
+export const listForDashboard = query({
+  args: {},
+  returns: v.object({
+    upcoming: v.array(agentRunViewValidator),
+    recent: v.array(agentRunViewValidator),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const upcoming = await ctx.db
+      .query("agentRuns")
+      .withIndex("by_status_and_runAt", (q) =>
+        q.eq("status", "scheduled").gte("runAt", now),
+      )
+      .order("asc")
+      .take(20);
+    const all = await ctx.db.query("agentRuns").collect();
+    const recent = all
+      .slice()
+      .sort((a, b) => b.runAt - a.runAt || b._creationTime - a._creationTime)
+      .slice(0, 50);
+    return { upcoming, recent };
+  },
+});
+
+export const listRunMessages = query({
+  args: { agentRunId: v.id("agentRuns") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.agentRunId);
+    if (!run) {
+      return { run: null, messages: [] };
+    }
+    const messages = await ctx.runQuery(
+      components.agent.messages.listMessagesByThreadId,
+      {
+        threadId: run.agentThreadId,
+        order: "asc",
+        paginationOpts: { cursor: null, numItems: 100 },
+      },
+    );
+    return { run, messages: messages.page };
+  },
 });
 
 export const scheduleContextual = internalMutation({
