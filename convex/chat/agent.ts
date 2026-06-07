@@ -18,6 +18,7 @@ import {
   proposeRemoveGoalNotification,
   proposeResolveGoal,
   proposeUpdateGoalNotification,
+  scheduleContextualRunFromChat,
 } from "./tools";
 
 export const chatAgent: Agent = new Agent(components.agent, {
@@ -42,6 +43,7 @@ export const chatAgent: Agent = new Agent(components.agent, {
     propose_resolve_goal: proposeResolveGoal,
     propose_create_entry: proposeCreateEntry,
     propose_edit_entry: proposeEditEntry,
+    schedule_contextual_run: scheduleContextualRunFromChat,
     add_goal_notification: proposeAddGoalNotification,
     remove_goal_notification: proposeRemoveGoalNotification,
     update_goal_notification: proposeUpdateGoalNotification,
