@@ -17,6 +17,7 @@ import type * as chat_proposalValidator from "../chat/proposalValidator.js";
 import type * as chat_proposals from "../chat/proposals.js";
 import type * as chat_public from "../chat/public.js";
 import type * as chat_tools from "../chat/tools.js";
+import type * as crons from "../crons.js";
 import type * as goals from "../goals.js";
 import type * as longTermGoals from "../longTermGoals.js";
 import type * as migrations from "../migrations.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "chat/proposals": typeof chat_proposals;
   "chat/public": typeof chat_public;
   "chat/tools": typeof chat_tools;
+  crons: typeof crons;
   goals: typeof goals;
   longTermGoals: typeof longTermGoals;
   migrations: typeof migrations;

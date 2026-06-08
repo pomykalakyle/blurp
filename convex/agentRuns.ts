@@ -11,6 +11,7 @@ import {
   query,
 } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import {
   PROACTIVE_PROVIDER_OPTIONS,
   proactiveAgent,
@@ -30,10 +31,23 @@ const sourceTypeValidator = v.union(
   v.literal("agent_run"),
 );
 
+const runKindValidator = v.union(
+  v.literal("heartbeat"),
+  v.literal("contextual"),
+);
+
+const DEFAULT_HEARTBEAT_UTC_MINUTES = [
+  12 * 60 + 30,
+  17 * 60 + 30,
+  22 * 60 + 30,
+];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const runnableRunValidator = v.object({
   _id: v.id("agentRuns"),
   _creationTime: v.number(),
-  kind: v.union(v.literal("heartbeat"), v.literal("contextual")),
+  kind: runKindValidator,
   status: runStatusValidator,
   runAt: v.number(),
   scheduledFunctionId: v.union(v.id("_scheduled_functions"), v.null()),
@@ -45,7 +59,7 @@ const runnableRunValidator = v.object({
 const agentRunViewValidator = v.object({
   _id: v.id("agentRuns"),
   _creationTime: v.number(),
-  kind: v.union(v.literal("heartbeat"), v.literal("contextual")),
+  kind: runKindValidator,
   status: runStatusValidator,
   runAt: v.number(),
   scheduledFunctionId: v.union(v.id("_scheduled_functions"), v.null()),
@@ -53,6 +67,47 @@ const agentRunViewValidator = v.object({
   sourceType: sourceTypeValidator,
   agentThreadId: v.string(),
 });
+
+async function createScheduledRun(
+  ctx: MutationCtx,
+  args: {
+    kind: "heartbeat" | "contextual";
+    runAt: number;
+    handoffContext: string | null;
+    sourceType: "heartbeat_planner" | "ordinary_chat" | "agent_run";
+  },
+): Promise<{
+  agentRunId: Id<"agentRuns">;
+  runAt: number;
+  agentThreadId: string;
+}> {
+  const agentThreadId = await agentCreateThread(ctx, components.agent, {
+    title: `Proactive ${args.kind} run · ${new Date(args.runAt).toISOString()}`,
+    summary: args.handoffContext ?? undefined,
+  });
+  await updateThreadMetadata(ctx, components.agent, {
+    threadId: agentThreadId,
+    patch: { status: "active" },
+  });
+
+  const agentRunId: Id<"agentRuns"> = await ctx.db.insert("agentRuns", {
+    kind: args.kind,
+    status: "scheduled",
+    runAt: args.runAt,
+    scheduledFunctionId: null,
+    handoffContext: args.handoffContext,
+    sourceType: args.sourceType,
+    agentThreadId,
+  });
+
+  const scheduledFunctionId: Id<"_scheduled_functions"> =
+    await ctx.scheduler.runAt(args.runAt, internal.agentRuns.execute, {
+      agentRunId,
+    });
+  await ctx.db.patch(agentRunId, { scheduledFunctionId });
+
+  return { agentRunId, runAt: args.runAt, agentThreadId };
+}
 
 export const listForDashboard = query({
   args: {},
@@ -115,32 +170,97 @@ export const scheduleContextual = internalMutation({
       throw new Error(`Invalid contextual run datetime: ${args.runAt}`);
     }
 
-    const agentThreadId = await agentCreateThread(ctx, components.agent, {
-      title: `Proactive run · ${new Date(runAt).toISOString()}`,
-      summary: args.handoffContext,
-    });
-    await updateThreadMetadata(ctx, components.agent, {
-      threadId: agentThreadId,
-      patch: { status: "active" },
-    });
-
-    const agentRunId: Id<"agentRuns"> = await ctx.db.insert("agentRuns", {
+    return await createScheduledRun(ctx, {
       kind: "contextual",
-      status: "scheduled",
       runAt,
-      scheduledFunctionId: null,
       handoffContext: args.handoffContext,
       sourceType: args.sourceType,
-      agentThreadId,
     });
+  },
+});
 
-    const scheduledFunctionId: Id<"_scheduled_functions"> =
-      await ctx.scheduler.runAt(runAt, internal.agentRuns.execute, {
-        agentRunId,
+export const planDailyHeartbeats = internalMutation({
+  args: {},
+  returns: v.object({
+    enabled: v.boolean(),
+    scheduled: v.number(),
+    skippedExisting: v.number(),
+    runTimesUtcMinutes: v.array(v.number()),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const existingConfig = await ctx.db
+      .query("heartbeatScheduleConfig")
+      .withIndex("by_key", (q) => q.eq("key", "default"))
+      .unique();
+
+    const config =
+      existingConfig ??
+      (await (async () => {
+        const configId = await ctx.db.insert("heartbeatScheduleConfig", {
+          key: "default",
+          enabled: true,
+          dailyRunTimesUtcMinutes: DEFAULT_HEARTBEAT_UTC_MINUTES,
+          updatedAt: now,
+          updatedBy: "system" as const,
+        });
+        return (await ctx.db.get(configId))!;
+      })());
+
+    if (!config.enabled) {
+      return {
+        enabled: false,
+        scheduled: 0,
+        skippedExisting: 0,
+        runTimesUtcMinutes: config.dailyRunTimesUtcMinutes,
+      };
+    }
+
+    const dayStart = new Date(now);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayStartMs = dayStart.getTime();
+    const dayEndMs = dayStartMs + DAY_MS;
+
+    const existingRuns = await ctx.db
+      .query("agentRuns")
+      .withIndex("by_kind_and_runAt", (q) =>
+        q.eq("kind", "heartbeat").gte("runAt", dayStartMs).lt("runAt", dayEndMs),
+      )
+      .collect();
+    const existingRunTimes = new Set(existingRuns.map((run) => run.runAt));
+
+    let scheduled = 0;
+    let skippedExisting = 0;
+    const normalizedRunTimes = Array.from(
+      new Set(
+        config.dailyRunTimesUtcMinutes.filter(
+          (minute) => Number.isInteger(minute) && minute >= 0 && minute < 1440,
+        ),
+      ),
+    ).sort((a, b) => a - b);
+
+    for (const minute of normalizedRunTimes) {
+      const runAt = dayStartMs + minute * 60 * 1000;
+      if (runAt <= now || existingRunTimes.has(runAt)) {
+        if (existingRunTimes.has(runAt)) skippedExisting += 1;
+        continue;
+      }
+
+      await createScheduledRun(ctx, {
+        kind: "heartbeat",
+        runAt,
+        handoffContext: null,
+        sourceType: "heartbeat_planner",
       });
-    await ctx.db.patch(agentRunId, { scheduledFunctionId });
+      scheduled += 1;
+    }
 
-    return { agentRunId, runAt, agentThreadId };
+    return {
+      enabled: true,
+      scheduled,
+      skippedExisting,
+      runTimesUtcMinutes: normalizedRunTimes,
+    };
   },
 });
 
