@@ -94,7 +94,21 @@ export default defineSchema({
       v.literal("agent_run"),
     ),
     agentThreadId: v.string(),
-  }).index("by_status_and_runAt", ["status", "runAt"]),
+  })
+    .index("by_status_and_runAt", ["status", "runAt"])
+    .index("by_kind_and_runAt", ["kind", "runAt"]),
+
+  heartbeatScheduleConfig: defineTable({
+    key: v.literal("default"),
+    enabled: v.boolean(),
+    dailyRunTimesUtcMinutes: v.array(v.number()),
+    updatedAt: v.number(),
+    updatedBy: v.union(
+      v.literal("system"),
+      v.literal("agent"),
+      v.literal("manual"),
+    ),
+  }).index("by_key", ["key"]),
 
   // Singleton: tracks the currently-in-flight notification scheduler
   // job. At most one row exists. Used so replan can cancel the pending
