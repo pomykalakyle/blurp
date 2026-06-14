@@ -12,6 +12,7 @@ type ScheduledTaskResult = {
 type NotifyUserResult = {
   notified: boolean;
   activationId: string | null;
+  messageId: string | null;
   sent: number;
   removed: number;
   failed: number;
@@ -82,12 +83,19 @@ export const lookupResolvedGoals = createTool({
   },
 });
 
+function getPromptMessageId(ctx: {
+  promptMessageId?: string;
+  messageId?: string;
+}): string | undefined {
+  // The SDK's runtime sets promptMessageId on the tool ctx; the type
+  // declaration calls it messageId. Read both to be safe.
+  return ctx.promptMessageId ?? ctx.messageId;
+}
+
 async function requireThreadAndMessage(
   ctx: { threadId?: string; promptMessageId?: string; messageId?: string },
 ): Promise<{ threadId: string; promptMessageId: string }> {
-  // The SDK's runtime sets promptMessageId on the tool ctx; the type
-  // declaration calls it messageId. Read both to be safe.
-  const promptMessageId = ctx.promptMessageId ?? ctx.messageId;
+  const promptMessageId = getPromptMessageId(ctx);
   if (!ctx.threadId || !promptMessageId) {
     throw new Error(
       "Tool called outside an assistant turn — threadId or promptMessageId missing",
@@ -162,17 +170,13 @@ export const scheduleTaskFromAgent = makeScheduleTaskTool("agent_activation");
 
 export const notifyUserFromActivation = createTool({
   description:
-    "Get the user's attention about the current activation. This sends a push notification; tapping it opens this activation's existing transcript. Use only when the user should look at the activation now. It does not create a new chat thread.",
+    "Send the user a visible message in the current activation transcript and get their attention with a push notification carrying the same message. Use only when the user should look at the activation now. It does not create a new chat thread.",
   inputSchema: z.object({
-    body: z
+    message: z
       .string()
       .describe(
-        "Short notification text telling the user why they should open this activation.",
+        "Short user-visible message to save in the activation transcript. The push notification body will use this exact text.",
       ),
-    title: z
-      .string()
-      .optional()
-      .describe("Optional notification title. Usually omit this."),
   }),
   execute: async (ctx, input): Promise<NotifyUserResult> => {
     if (!ctx.threadId) {
@@ -180,8 +184,8 @@ export const notifyUserFromActivation = createTool({
     }
     return await ctx.runAction(internal.agentActivations.notifyUser, {
       agentThreadId: ctx.threadId,
-      body: input.body,
-      title: input.title,
+      promptMessageId: getPromptMessageId(ctx),
+      message: input.message,
     });
   },
 });
