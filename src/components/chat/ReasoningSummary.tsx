@@ -19,10 +19,23 @@ function previewText(text: string) {
     .trim();
 }
 
+function expandedText(text: string) {
+  const lines = text.split(/\n+/);
+  const firstContentLineIndex = lines.findIndex((line) => line.trim());
+  if (firstContentLineIndex === -1) return "";
+
+  const rest = lines
+    .slice(firstContentLineIndex + 1)
+    .join("\n")
+    .trim();
+  return rest || text.trim();
+}
+
 export function ReasoningSummary({ text }: Props) {
   const trimmed = text.trim();
   if (!trimmed) return null;
   const preview = previewText(trimmed);
+  const details = expandedText(trimmed);
 
   return (
     <details className="reasoning-summary my-1 text-muted">
@@ -33,7 +46,7 @@ export function ReasoningSummary({ text }: Props) {
       </summary>
       <div className="mt-2 border-l border-soft pl-3 text-xs leading-relaxed text-dim">
         <div className="markdown-body">
-          <ReactMarkdown>{trimmed}</ReactMarkdown>
+          <ReactMarkdown>{details}</ReactMarkdown>
         </div>
       </div>
     </details>
