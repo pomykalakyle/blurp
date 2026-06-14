@@ -98,10 +98,33 @@ export default defineSchema({
     .index("by_status_and_scheduledAt", ["status", "scheduledAt"])
     .index("by_kind_and_scheduledAt", ["kind", "scheduledAt"]),
 
+  agentRuns: defineTable({
+    kind: v.union(v.literal("heartbeat"), v.literal("contextual")),
+    status: v.union(
+      v.literal("scheduled"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("canceled"),
+    ),
+    runAt: v.number(),
+    scheduledFunctionId: v.union(v.id("_scheduled_functions"), v.null()),
+    handoffContext: v.union(v.string(), v.null()),
+    sourceType: v.union(
+      v.literal("heartbeat_planner"),
+      v.literal("ordinary_chat"),
+      v.literal("agent_run"),
+    ),
+    agentThreadId: v.string(),
+  })
+    .index("by_status_and_runAt", ["status", "runAt"])
+    .index("by_kind_and_runAt", ["kind", "runAt"]),
+
   heartbeatScheduleConfig: defineTable({
     key: v.literal("default"),
     enabled: v.boolean(),
-    dailyHeartbeatUtcMinutes: v.array(v.number()),
+    dailyHeartbeatUtcMinutes: v.optional(v.array(v.number())),
+    dailyRunTimesUtcMinutes: v.optional(v.array(v.number())),
     updatedAt: v.number(),
     updatedBy: v.union(
       v.literal("system"),
