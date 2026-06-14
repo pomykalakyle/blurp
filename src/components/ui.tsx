@@ -136,6 +136,9 @@ export function ThemeStyles() {
       .markdown-body pre { background-color: var(--c-surface-2); padding: 0.75em; border-radius: 6px; overflow-x: auto; font-size: 0.85em; margin: 0 0 0.75em; }
       .markdown-body pre code { background: transparent; padding: 0; }
       .markdown-body h1, .markdown-body h2, .markdown-body h3 { margin: 0.75em 0 0.4em; font-weight: 600; }
+      .reasoning-summary > summary { list-style: none; }
+      .reasoning-summary > summary::marker { content: ""; }
+      .reasoning-summary > summary::-webkit-details-marker { display: none; }
 
       @keyframes typing-dot-bounce {
         0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
