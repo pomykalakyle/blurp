@@ -604,7 +604,7 @@ export function AgentActivationsScreen() {
             </div>
             {data.recent.length === 0 ? (
               <div className="rounded-md border border-dashed border-default p-5 text-sm text-muted">
-                No agent activations yet.
+                No recent activations.
               </div>
             ) : (
               <div className="max-h-[42rem] space-y-2 overflow-y-auto scroll-thin pr-1">

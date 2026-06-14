@@ -38,6 +38,12 @@ const activationKindValidator = v.union(
   v.literal("task"),
 );
 
+const RECENT_ACTIVATION_STATUSES = [
+  "completed",
+  "failed",
+  "canceled",
+] as const;
+
 const DEFAULT_HEARTBEAT_UTC_MINUTES = [
   12 * 60 + 30,
   17 * 60 + 30,
@@ -157,8 +163,19 @@ export const listForDashboard = query({
       )
       .order("asc")
       .take(20);
-    const all = await ctx.db.query("agentActivations").collect();
-    const recent = all
+
+    const recentByStatus = await Promise.all(
+      RECENT_ACTIVATION_STATUSES.map((status) =>
+        ctx.db
+          .query("agentActivations")
+          .withIndex("by_status_and_scheduledAt", (q) => q.eq("status", status))
+          .order("desc")
+          .take(50),
+      ),
+    );
+    const recent = recentByStatus
+      .flat()
+      .filter((activation) => activation.scheduledAt <= now)
       .slice()
       .sort(
         (a, b) =>
