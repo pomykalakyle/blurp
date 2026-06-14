@@ -229,15 +229,6 @@ export const createScopedCheckInThread = internalMutation({
   },
 });
 
-async function listCheckInThreadIds(
-  ctx: { db: import("../_generated/server").QueryCtx["db"] },
-): Promise<Set<string>> {
-  const metas = await ctx.db.query("chatThreadMeta").collect();
-  return new Set(
-    metas.filter((m) => m.kind === "goal_check_in").map((m) => m.threadId),
-  );
-}
-
 export const listThreads = query({
   args: {},
   handler: async (ctx) => {
@@ -245,20 +236,7 @@ export const listThreads = query({
       components.agent.threads.listThreadsByUserId,
       { userId: USER_ID, order: "desc" },
     );
-    const checkInIds = await listCheckInThreadIds(ctx);
-    return result.page.filter((t) => !checkInIds.has(t._id));
-  },
-});
-
-export const listCheckInThreads = query({
-  args: {},
-  handler: async (ctx) => {
-    const result = await ctx.runQuery(
-      components.agent.threads.listThreadsByUserId,
-      { userId: USER_ID, order: "desc" },
-    );
-    const checkInIds = await listCheckInThreadIds(ctx);
-    return result.page.filter((t) => checkInIds.has(t._id));
+    return result.page;
   },
 });
 
