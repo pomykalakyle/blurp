@@ -8,26 +8,36 @@ import { NarrativeScreen } from "./screens/NarrativeScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { AgentActivationsScreen } from "./screens/AgentActivationsScreen";
 import { api } from "../convex/_generated/api";
+import type { Id } from "../convex/_generated/dataModel";
 import type { SidebarSelection } from "./sidebarSelection";
 
-// Read ?check-in=<threadId> / ?goal=<goalId> once at startup so a tap on
-// a Web Push notification (which loads the PWA at one of those URLs)
+// Read notification/deep-link params once at startup so tapping a Web Push
 // lands on the right screen. Returns null when no relevant param is set.
 function readInitialDeepLink(): {
   section: Section;
-  threadId: string | null;
+  target: SidebarSelection;
 } | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
   const checkIn = params.get("check-in");
+  const activation = params.get("activation");
   const goal = params.get("goal");
   if (checkIn) {
-    return { section: "chat", threadId: checkIn };
+    return { section: "chat", target: { type: "chat", threadId: checkIn } };
+  }
+  if (activation) {
+    return {
+      section: "chat",
+      target: {
+        type: "activation",
+        activationId: activation as Id<"agentActivations">,
+      },
+    };
   }
   if (goal) {
     // v1: just open the goals screen. Scrolled-to-and-focused is a
     // stretch goal per the functional spec §7.
-    return { section: "goals", threadId: null };
+    return { section: "goals", target: { type: "chat", threadId: null } };
   }
   return null;
 }
@@ -38,10 +48,9 @@ export default function App() {
     deepLink?.section ?? "goals",
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedTarget, setSelectedTarget] = useState<SidebarSelection>({
-    type: "chat",
-    threadId: deepLink?.threadId ?? null,
-  });
+  const [selectedTarget, setSelectedTarget] = useState<SidebarSelection>(
+    deepLink?.target ?? { type: "chat", threadId: null },
+  );
 
   // Clear the deep-link params so a refresh doesn't keep re-firing them.
   useEffect(() => {

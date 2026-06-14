@@ -22,6 +22,7 @@ type SidebarItem =
       id: Id<"agentActivations">;
       activationId: Id<"agentActivations">;
       kind: "heartbeat" | "task";
+      status: "running" | "completed";
       scheduledAt: number;
       brief: string | null;
       sortTime: number;

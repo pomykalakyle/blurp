@@ -223,7 +223,7 @@ export function ActivationConversation({ activationId }: Props) {
             {activationTitle(activation)}
           </h1>
           <p className="truncate text-xs text-muted">
-            {formatDateTime(activation.scheduledAt)}
+            {activation.status} · {formatDateTime(activation.scheduledAt)}
           </p>
         </div>
       </header>

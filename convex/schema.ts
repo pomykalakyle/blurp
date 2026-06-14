@@ -96,7 +96,8 @@ export default defineSchema({
     agentThreadId: v.string(),
   })
     .index("by_status_and_scheduledAt", ["status", "scheduledAt"])
-    .index("by_kind_and_scheduledAt", ["kind", "scheduledAt"]),
+    .index("by_kind_and_scheduledAt", ["kind", "scheduledAt"])
+    .index("by_agentThreadId", ["agentThreadId"]),
 
   heartbeatScheduleConfig: defineTable({
     key: v.literal("default"),
