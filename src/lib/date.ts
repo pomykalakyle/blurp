@@ -11,19 +11,20 @@ export function formatNotificationSchedule(
   schedule:
     | { kind: "oneoff"; at: number }
     | { kind: "daily"; time: string },
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
 ): string {
   if (schedule.kind === "oneoff") {
     const d = new Date(schedule.at);
     const datePart = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Los_Angeles",
+      timeZone,
     }).format(d);
     const timePart = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "America/Los_Angeles",
+      timeZone,
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     }).format(d);
-    return `one-off at ${datePart} ${timePart} Pacific`;
+    return `one-off at ${datePart} ${timePart} (${timeZone})`;
   }
-  return `daily at ${schedule.time} Pacific`;
+  return `daily at ${schedule.time} (${timeZone})`;
 }

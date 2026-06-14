@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 // Notification schedule — shared between the storage shape on
 // `notifications.schedule` and the notification-related proposal kinds
-// below. `at` is a ms timestamp; `time` is HH:MM in 24-hour Pacific.
+// below. `at` is a ms timestamp; `time` is HH:MM in 24-hour user-local time.
 export const notificationScheduleValidator = v.union(
   v.object({
     kind: v.literal("oneoff"),

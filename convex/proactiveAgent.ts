@@ -2,28 +2,42 @@ import { Agent, stepCountIs } from "@convex-dev/agent";
 import { gateway } from "@ai-sdk/gateway";
 import { components } from "./_generated/api";
 import {
-  ABOUT_KYLE_SYSTEM,
   CHAT_MODEL,
   CHAT_PROVIDER_OPTIONS,
+  STATIC_AGENT_INSTRUCTIONS,
+  buildUserSystemPrompt,
 } from "./chat/constants";
-import { messageKyleFromActivation, scheduleTaskFromAgent } from "./chat/tools";
+import { notifyUserFromActivation, scheduleTaskFromAgent } from "./chat/tools";
+import type { UserSettingsView } from "./userSettingsModel";
 
-export const PROACTIVE_AGENT_SYSTEM = `${ABOUT_KYLE_SYSTEM}
+function proactiveActivationInstructions(baseSystem: string): string {
+  return `${baseSystem}
 
 ## Proactive activation mode
 
 You are active on Blurp's behalf. Use the activation brief and current app
-context to do useful work toward Kyle's goals. Your final text is internal
-activation output, not a message to Kyle.
+context to do useful work toward the user's goals. Your final text is internal
+activation output, not a message to the user.
 
 Some activations benefit from current external information. Use web search when
 it would help you understand an opportunity, event, or other goal-relevant
 context.
 
 Writing final text only saves internal activation output; it does not notify
-Kyle. If Kyle should look at this activation now, use message_kyle. The
+the user. If the user should look at this activation now, use notify_user. The
 notification opens this activation's existing transcript, not a new chat. If a
 future follow-up would help, use the task scheduling tool.`;
+}
+
+export const PROACTIVE_AGENT_SYSTEM = proactiveActivationInstructions(
+  STATIC_AGENT_INSTRUCTIONS,
+);
+
+export function buildProactiveAgentSystem(
+  settings: UserSettingsView,
+): string {
+  return proactiveActivationInstructions(buildUserSystemPrompt(settings));
+}
 
 export const proactiveAgent: Agent = new Agent(components.agent, {
   name: "BlurpProactive",
@@ -37,7 +51,7 @@ export const proactiveAgent: Agent = new Agent(components.agent, {
       searchLanguageFilter: ["en"],
     }),
     schedule_task: scheduleTaskFromAgent,
-    message_kyle: messageKyleFromActivation,
+    notify_user: notifyUserFromActivation,
   },
 });
 

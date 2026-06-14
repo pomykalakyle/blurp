@@ -25,7 +25,7 @@ Reference: [Convex Agent docs](https://docs.convex.dev/agents) · [streaming gui
 - **Provider**: all Anthropic calls go through the Vercel AI Gateway via `@ai-sdk/gateway`. The gateway key is a server-side Convex env var.
 - **Models**: Sonnet 4.6 for chat turns; Haiku 4.5 for auto-title.
 - **Read tools**: Claude's lookups (archived LTGs, ended goals) are AI SDK tools that the Agent runs server-side. Tool calls are persisted so the UI can render the "Looking up archived goals…" indicator.
-- **Write surface (proposal cards)**: cards are *not* tools. Claude emits them as structured output and the server persists them in a `live` state. When Kyle sends the next message in a thread, any prior `live` cards flip to `expired`. When Kyle taps Accept, the server re-verifies the target hasn't changed; if it has, the card flips to `stale` with Accept disabled; otherwise the change applies and the card flips to `accepted`.
+- **Write surface (proposal cards)**: cards are *not* tools. Claude emits them as structured output and the server persists them in a `live` state. When the user sends the next message in a thread, any prior `live` cards flip to `expired`. When the user taps Accept, the server re-verifies the target hasn't changed; if it has, the card flips to `stale` with Accept disabled; otherwise the change applies and the card flips to `accepted`.
 
 ---
 

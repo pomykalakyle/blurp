@@ -28,6 +28,8 @@ import type * as ping from "../ping.js";
 import type * as proactiveAgent from "../proactiveAgent.js";
 import type * as push from "../push.js";
 import type * as pushNode from "../pushNode.js";
+import type * as userSettings from "../userSettings.js";
+import type * as userSettingsModel from "../userSettingsModel.js";
 
 import type {
   ApiFromModules,
@@ -56,6 +58,8 @@ declare const fullApi: ApiFromModules<{
   proactiveAgent: typeof proactiveAgent;
   push: typeof push;
   pushNode: typeof pushNode;
+  userSettings: typeof userSettings;
+  userSettingsModel: typeof userSettingsModel;
 }>;
 
 /**

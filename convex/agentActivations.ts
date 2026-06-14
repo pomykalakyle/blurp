@@ -14,8 +14,10 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import {
   PROACTIVE_PROVIDER_OPTIONS,
+  buildProactiveAgentSystem,
   proactiveAgent,
 } from "./proactiveAgent";
+import type { UserSettingsView } from "./userSettingsModel";
 
 const activationStatusValidator = v.union(
   v.literal("scheduled"),
@@ -198,7 +200,7 @@ export const getByAgentThreadId = internalQuery({
   },
 });
 
-export const messageKyle = internalAction({
+export const notifyUser = internalAction({
   args: {
     agentThreadId: v.string(),
     body: v.string(),
@@ -517,6 +519,10 @@ export const execute = internalAction({
         internal.agentActivations.currentStateForActivation,
         {},
       );
+      const settings: UserSettingsView = await ctx.runQuery(
+        internal.userSettings.getInternal,
+        {},
+      );
       const prompt = `<proactive-activation>
 Activation id: ${activation._id}
 Activation kind: ${activation.kind}
@@ -534,6 +540,7 @@ ${currentState}`;
         { threadId: activation.agentThreadId },
         {
           prompt,
+          system: buildProactiveAgentSystem(settings),
           providerOptions: PROACTIVE_PROVIDER_OPTIONS,
           onStepFinish: (step) => {
             console.log("[agent-activation] step finished:", {

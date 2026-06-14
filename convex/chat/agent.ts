@@ -1,7 +1,7 @@
 import { Agent, stepCountIs } from "@convex-dev/agent";
 import { gateway } from "@ai-sdk/gateway";
 import { components } from "../_generated/api";
-import { ABOUT_KYLE_SYSTEM, CHAT_MODEL } from "./constants";
+import { CHAT_MODEL, STATIC_AGENT_INSTRUCTIONS } from "./constants";
 import {
   lookupArchivedLtgs,
   lookupResolvedGoals,
@@ -21,7 +21,7 @@ import {
 export const chatAgent: Agent = new Agent(components.agent, {
   name: "BlurpChat",
   languageModel: gateway(CHAT_MODEL),
-  instructions: ABOUT_KYLE_SYSTEM,
+  instructions: STATIC_AGENT_INSTRUCTIONS,
   // Enables multi-step tool calling. Without this (or with stepCountIs(1)),
   // the AI SDK runs the agent in single-step mode and tool execute() functions
   // do not run — the model just emits tool-call descriptions in the stream.

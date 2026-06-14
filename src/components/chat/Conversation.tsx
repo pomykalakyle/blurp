@@ -11,7 +11,7 @@ import { FONT_DISPLAY } from "../ui";
 
 // Mirrors of CHECK_IN_KICKOFF / CHECK_IN_NEXT in convex/chat/constants.ts.
 // The backend kicks off check-in chats with the open sentinel; the client
-// fires the next sentinel after Kyle accepts a card during a check-in.
+// fires the next sentinel after the user accepts a card during a check-in.
 // Both are hidden from the transcript.
 const CHECK_IN_KICKOFF_TEXT = "__check_in_open__";
 const CHECK_IN_NEXT_TEXT = "__check_in_next__";

@@ -1,5 +1,6 @@
 import { internalQuery } from "../_generated/server";
-import { pacificDate } from "./dates";
+import { loadUserSettings } from "../userSettings";
+import { localDate } from "./dates";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CONTEXT_WINDOW_DAYS = 14;
@@ -46,7 +47,9 @@ export const listRecentlyResolvedGoals = internalQuery({
 export const listEntriesInContextWindow = internalQuery({
   args: {},
   handler: async (ctx) => {
-    const cutoff = pacificDate(
+    const settings = await loadUserSettings(ctx);
+    const cutoff = localDate(
+      settings.timeZone,
       new Date(Date.now() - CONTEXT_WINDOW_DAYS * DAY_MS),
     );
     const all = await ctx.db.query("narrativeEntries").collect();

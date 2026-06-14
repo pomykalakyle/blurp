@@ -6,7 +6,7 @@ A Claude artifact for end-of-week reflection, goal setting, and goal tracking. V
 
 ## 1. Overview
 
-A personal weekly ritual tool for one user (Kyle) combining:
+A personal weekly ritual tool for one user (the user) combining:
 
 - Goal tracking (set goals for the week, track progress throughout, review at week's end)
 - Free-form weekly narrative writing (capture what happened, what's on the mind)
@@ -15,10 +15,10 @@ A personal weekly ritual tool for one user (Kyle) combining:
 
 Data is private, stored per-user via Claude's artifact storage.
 
-How Kyle uses it:
+How the user uses it:
 
 - Weekly reviews happen on the weekend (Fri/Sat/Sun, varies week to week), at his computer.
-- Throughout the week, he uses the app from iPhone and desktop to check off goals and flag slips.
+- Throughout the week, he uses the app from phone and desktop to check off goals and flag slips.
 - He's rambly when writing and wants Claude to tighten it up a bit while preserving his voice.
 - He sometimes wants to hear his narrative read back to identify what to revise.
 - He prefers dark mode. Function over form for v1.
@@ -46,13 +46,13 @@ Narration-led. The review is for reflection, not for walking through every goal.
 
 1. **Goals you didn't hit this week.** A read-only summary listing missed achievement goals (unchecked) and avoidance goals that slipped. Short and contextual, sits above the narrative as a prompt.
 2. **Narrative.** Large textarea, word count, "Clean up with Claude" button, "Ask Claude to..." input, version dropdown, playback controls.
-   - The "Ask Claude to..." input can do more than revise text. Kyle can say things like "pull out goals for next week from this" or "what should go on my ideas list from this." Claude responds with proposed weekly goals, long-term goals, or ideas (see 2.4). Proposals appear as cards beneath the narrative with Add / Dismiss per item.
+   - The "Ask Claude to..." input can do more than revise text. the user can say things like "pull out goals for next week from this" or "what should go on my ideas list from this." Claude responds with proposed weekly goals, long-term goals, or ideas (see 2.4). Proposals appear as cards beneath the narrative with Add / Dismiss per item.
 3. **Confirm panel** (conditional, only shows what's relevant):
    - Goals carrying to next week: a list of all carrying goals (any with a long-term parent, achievement or avoidance) with × to remove from carry. See 2.2 for the carry rule.
-   - Staged proposals (weekly goals, long-term goals, ideas) that Kyle accepted: listed for final confirmation.
+   - Staged proposals (weekly goals, long-term goals, ideas) that the user accepted: listed for final confirmation.
    - "Complete week and start next" primary button. "Cancel" returns to This Week without changes.
 
-If Kyle forgot to mark an achievement goal done during the week, he can dismiss the review, fix it on This Week, and reopen.
+If the user forgot to mark an achievement goal done during the week, he can dismiss the review, fix it on This Week, and reopen.
 
 #### 2.1.3 History
 
@@ -61,8 +61,8 @@ If Kyle forgot to mark an achievement goal done during the week, he can dismiss 
 
 #### 2.1.4 Ideas (backlog)
 
-- Scrollable list of future-feature ideas. Pre-seeded with the deferred items below (see 4.2). Kyle can add, edit, delete manually.
-- Also receives items added by Claude during review narration when Kyle accepts a proposed idea.
+- Scrollable list of future-feature ideas. Pre-seeded with the deferred items below (see 4.2). the user can add, edit, delete manually.
+- Also receives items added by Claude during review narration when the user accepts a proposed idea.
 
 #### 2.1.5 Navigation
 
@@ -77,14 +77,14 @@ Goals come in two completion types. The difference matters because it flips what
 #### Achievement goal
 - Format: "Do X this week"
 - State: `{ done: boolean }`, starts `false`.
-- Default state is failing: if Kyle does nothing, the goal is missed.
+- Default state is failing: if the user does nothing, the goal is missed.
 - UI: empty circle. Filled circle (and struck-through title) when done. Tap to toggle.
 - Examples: "Finish PR #1234", "Workout 3x", "Call mom"
 
 #### Avoidance goal
 - Format: "Don't do X this week"
 - State: `{ slipped: boolean }`, starts `false`.
-- Default state is passing: if Kyle does nothing, the goal is held.
+- Default state is passing: if the user does nothing, the goal is held.
 - UI: green check or "clean" indicator. Red flag when slipped. Tap to toggle.
 - Examples: "Don't smoke", "No social media after 9pm"
 - Tracked as a simple yes/no slip per week. Slip count and streak tracking are in the backlog.
@@ -92,14 +92,14 @@ Goals come in two completion types. The difference matters because it flips what
 #### Linking to long-term goals
 Either type can have `longTermGoalId` set, or null for standalone. The "This Week" view groups goals by their long-term goal, with standalone goals under "Other goals."
 
-Long-term goals are created and managed inline on the This Week page. They have no enforced review cadence in v1. They're ongoing entities Kyle creates, attaches weekly goals to, and archives when no longer relevant. Periodic review (monthly, quarterly) is in the backlog.
+Long-term goals are created and managed inline on the This Week page. They have no enforced review cadence in v1. They're ongoing entities the user creates, attaches weekly goals to, and archives when no longer relevant. Periodic review (monthly, quarterly) is in the backlog.
 
 #### Carry-over to next week
-When the week closes, any goal with a long-term parent carries to the next week automatically with fresh state (achievement: not done, avoidance: not slipped). Standalone goals under "Other" do not carry. Kyle can remove individual goals from the carry list in the review confirm panel. Goal notes do not carry; only title, type, and long-term parent.
+When the week closes, any goal with a long-term parent carries to the next week automatically with fresh state (achievement: not done, avoidance: not slipped). Standalone goals under "Other" do not carry. the user can remove individual goals from the carry list in the review confirm panel. Goal notes do not carry; only title, type, and long-term parent.
 
 ### 2.3 Week lifecycle
 
-Week boundaries are flexible. The week closes when Kyle marks the weekly review complete, at which point a new week opens automatically. There's no enforced day-of-week, which matches the habit of reviewing somewhere on the weekend.
+Week boundaries are flexible. The week closes when the user marks the weekly review complete, at which point a new week opens automatically. There's no enforced day-of-week, which matches the habit of reviewing somewhere on the weekend.
 
 ```
 [in_progress] --(user clicks "Complete week" in Review)--> [reviewed]
@@ -116,7 +116,7 @@ Week boundaries are flexible. The week closes when Kyle marks the weekly review 
 ```
 
 - Week IDs are deterministic ISO weeks. The close trigger is manual.
-- No automatic close. If Kyle skips a weekend, the in-progress week stays open. The "This Week" screen shows how long it's been open.
+- No automatic close. If the user skips a weekend, the in-progress week stays open. The "This Week" screen shows how long it's been open.
 
 ### 2.4 Narrative system
 
@@ -124,7 +124,7 @@ Free-form text. AI involvement in v1 covers three things:
 
 1. **Cleanup.** Tighten rambly writing while preserving voice. One-click via the "Clean up with Claude" button.
 2. **Revision.** Iterative edits via the "Ask Claude to..." input ("make the work paragraph more concise", "merge paragraphs 2 and 3", etc.).
-3. **Proposals.** Through the same "Ask Claude to..." input, Kyle can ask Claude to extract or generate items from the narrative for the coming week or for the backlog ("suggest goals for next week", "any long-term theme here", "pull out ideas").
+3. **Proposals.** Through the same "Ask Claude to..." input, the user can ask Claude to extract or generate items from the narrative for the coming week or for the backlog ("suggest goals for next week", "any long-term theme here", "pull out ideas").
 
 Pattern detection across weeks, automatic prompts, and AI-suggested-without-asking are all in the backlog. AI only acts when invoked.
 
@@ -139,7 +139,7 @@ Free-form textarea, autosaves to the current version (source: "user"). Word coun
 Result added as a new version (source: "claude_cleanup"). User can revert via version selector.
 
 #### Revision and proposals
-"Ask Claude to..." input sends the narrative + Kyle's instruction. Claude returns a structured JSON response:
+"Ask Claude to..." input sends the narrative + the user's instruction. Claude returns a structured JSON response:
 
 ```
 {
@@ -153,7 +153,7 @@ Result added as a new version (source: "claude_cleanup"). User can revert via ve
 Any field can be empty/omitted. The UI handles each piece:
 
 - A returned `narrative` is added as a new version (source: "claude_revision", instruction stored alongside).
-- Proposed weekly/long-term goals and ideas render as cards beneath the narrative with Add / Dismiss buttons. Accepted items stage into the confirm panel; they're only created when Kyle hits "Complete week and start next."
+- Proposed weekly/long-term goals and ideas render as cards beneath the narrative with Add / Dismiss buttons. Accepted items stage into the confirm panel; they're only created when the user hits "Complete week and start next."
 - `longTermGoalTitle` on a proposed weekly goal can reference an existing long-term goal by title, or propose a new one (in which case the new long-term goal is staged alongside).
 
 #### Version history
@@ -164,7 +164,7 @@ Uses browser `SpeechSynthesis` API (`window.speechSynthesis`). No external servi
 
 ### 2.5 Responsive design
 
-Dark mode is the default and only mode in v1. Light mode is in the backlog. The app is responsive between iPhone and desktop, with function prioritized over polish for the initial version.
+Dark mode is the default and only mode in v1. Light mode is in the backlog. The app is responsive between phone and desktop, with function prioritized over polish for the initial version.
 
 - Breakpoint at 768px.
 - Tap targets minimum 44px on mobile.
@@ -267,7 +267,7 @@ Anthropic API calls go through `window.fetch` directly from the artifact. The ar
 
 ### 3.5 Supabase migration path
 
-If Kyle wants a separate native app reading the same data later, the schema maps to:
+If the user wants a separate native app reading the same data later, the schema maps to:
 
 ```
 Postgres tables:
@@ -339,10 +339,10 @@ On first launch, the Ideas screen will be pre-populated with:
 
 ### 4.4 Open questions
 
-- ISO week vs Monday-week vs Sunday-week for week ID calculation. Defaulting to ISO week. Revisit if it doesn't match Kyle's mental model.
+- ISO week vs Monday-week vs Sunday-week for week ID calculation. Defaulting to ISO week. Revisit if it doesn't match the user's mental model.
 - Goal ordering within a week: drag to reorder, or creation order? Defaulting to creation order, drag is in backlog.
 - Confirmation on destructive actions (delete goal, archive long-term goal): simple inline confirm, no modal.
-- What happens if Kyle accepts proposed weekly goals but then hits Cancel on the review? Staged items are discarded, since they live only in component state.
+- What happens if the user accepts proposed weekly goals but then hits Cancel on the review? Staged items are discarded, since they live only in component state.
 - Whether to surface "0 of N goals hit" stats anywhere in v1, or save all stats for a later dashboard. Currently no stats UI in v1 beyond the history row's hit rate.
 
 ---

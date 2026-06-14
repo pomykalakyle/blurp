@@ -20,20 +20,22 @@ import {
 import { api, components, internal } from "../_generated/api";
 import { chatAgent } from "./agent";
 import {
-  ABOUT_KYLE_SYSTEM,
   CHAT_PROVIDER_OPTIONS,
   CHECK_IN_INSTRUCTIONS,
   CHECK_IN_KICKOFF,
   SCOPED_CHECK_IN_INSTRUCTIONS,
   TITLE_MODEL,
   TITLE_PROVIDER_OPTIONS,
+  buildUserSystemPrompt,
 } from "./constants";
-import { pacificDate, pacificDateTime } from "./dates";
+import { localDate, localDateTime } from "./dates";
+import { SINGLE_USER_AGENT_USER_ID } from "../userSettingsModel";
 import type { Doc } from "../_generated/dataModel";
+import type { UserSettingsView } from "../userSettingsModel";
 
 type ProposalCard = Doc<"proposalCards">;
 
-function summarizeProposal(card: ProposalCard): string {
+function summarizeProposal(card: ProposalCard, timeZone: string): string {
   const p = card.proposal;
   switch (p.kind) {
     case "createGoal": {
@@ -42,7 +44,7 @@ function summarizeProposal(card: ProposalCard): string {
         notifCount === 0
           ? ""
           : ` with ${notifCount} notification${notifCount === 1 ? "" : "s"}: ${p.notifications!
-              .map((n) => `${formatSchedule(n.schedule)} "${n.body}"`)
+              .map((n) => `${formatSchedule(n.schedule, timeZone)} "${n.body}"`)
               .join("; ")}`;
       return `create goal "${p.title}" (${p.type})${notifSuffix}`;
     }
@@ -98,12 +100,14 @@ function summarizeProposal(card: ProposalCard): string {
       return `edit entry ${p.entryId} (${fields.join(", ") || "no fields"})`;
     }
     case "createNotification":
-      return `add ${formatSchedule(p.schedule)} notification to goal ${p.goalId} — "${p.body}"`;
+      return `add ${formatSchedule(p.schedule, timeZone)} notification to goal ${p.goalId} — "${p.body}"`;
     case "removeNotification":
       return `remove notification ${p.notificationId} from goal ${p.goalId}`;
     case "updateNotification": {
       const fields = [
-        p.schedule !== undefined ? `schedule→${formatSchedule(p.schedule)}` : null,
+        p.schedule !== undefined
+          ? `schedule→${formatSchedule(p.schedule, timeZone)}`
+          : null,
         p.body !== undefined ? `body→"${p.body}"` : null,
       ].filter((f): f is string => f !== null);
       return `edit notification ${p.notificationId} on goal ${p.goalId} (${fields.join(", ") || "no fields"})`;
@@ -115,11 +119,12 @@ function formatSchedule(
   schedule:
     | { kind: "oneoff"; at: number }
     | { kind: "daily"; time: string },
+  timeZone: string,
 ): string {
   if (schedule.kind === "oneoff") {
-    return `one-off at ${pacificDateTime(schedule.at)}`;
+    return `one-off at ${localDateTime(timeZone, schedule.at)}`;
   }
-  return `daily at ${schedule.time} Pacific`;
+  return `daily at ${schedule.time} (${timeZone})`;
 }
 
 function describeStatus(card: ProposalCard): string {
@@ -127,11 +132,11 @@ function describeStatus(card: ProposalCard): string {
     case "accepted":
       return "ACCEPTED (applied)";
     case "dismissed":
-      return "DISMISSED by Kyle";
+      return "DISMISSED by the user";
     case "expired":
-      return "EXPIRED (Kyle moved on without acting on it)";
+      return "EXPIRED (the user moved on without acting on it)";
     case "stale":
-      return "STALE (Kyle accepted but the change could not be applied — underlying data had moved)";
+      return "STALE (the user accepted but the change could not be applied — underlying data had moved)";
     case "live":
       return "still LIVE";
   }
@@ -157,6 +162,10 @@ async function buildPriorTurnProposalsBlock(
   ctx: { runQuery: import("../_generated/server").ActionCtx["runQuery"] },
   threadId: string,
 ): Promise<string> {
+  const settings: UserSettingsView = await ctx.runQuery(
+    internal.userSettings.getInternal,
+    {},
+  );
   const priorUserMsgId = await findPriorUserMessageId(ctx, threadId);
   if (!priorUserMsgId) return "";
   const cards: ProposalCard[] = await ctx.runQuery(
@@ -165,21 +174,23 @@ async function buildPriorTurnProposalsBlock(
   );
   if (cards.length === 0) return "";
   const lines = cards.map(
-    (c) => `- ${summarizeProposal(c)} — ${describeStatus(c)}`,
+    (c) => `- ${summarizeProposal(c, settings.timeZone)} — ${describeStatus(c)}`,
   );
   return `\n\n<previous-turn-proposals>
-These are the proposals you made on your previous turn and what Kyle did with them. Take these outcomes into account before re-proposing the same thing.
+These are the proposals you made on your previous turn and what the user did with them. Take these outcomes into account before re-proposing the same thing.
 ${lines.join("\n")}
 </previous-turn-proposals>`;
 }
 
-const USER_ID = "kyle";
+const AGENT_USER_ID = SINGLE_USER_AGENT_USER_ID;
 
 export const createThread = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
-    return await agentCreateThread(ctx, components.agent, { userId: USER_ID });
+    return await agentCreateThread(ctx, components.agent, {
+      userId: AGENT_USER_ID,
+    });
   },
 });
 
@@ -188,15 +199,16 @@ export const createCheckInThread = mutation({
   returns: v.string(),
   handler: async (ctx) => {
     const threadId = await agentCreateThread(ctx, components.agent, {
-      userId: USER_ID,
+      userId: AGENT_USER_ID,
     });
+    const settings = await ctx.runQuery(internal.userSettings.getInternal, {});
     await ctx.db.insert("chatThreadMeta", {
       threadId,
       kind: "goal_check_in",
     });
     await updateThreadMetadata(ctx, components.agent, {
       threadId,
-      patch: { title: `Check-in · ${pacificDate()}` },
+      patch: { title: `Check-in · ${localDate(settings.timeZone)}` },
     });
     await ctx.scheduler.runAfter(0, internal.chat.public.openCheckInChat, {
       threadId,
@@ -214,8 +226,9 @@ export const createScopedCheckInThread = internalMutation({
   returns: v.string(),
   handler: async (ctx, args) => {
     const threadId = await agentCreateThread(ctx, components.agent, {
-      userId: USER_ID,
+      userId: AGENT_USER_ID,
     });
+    const settings = await ctx.runQuery(internal.userSettings.getInternal, {});
     await ctx.db.insert("chatThreadMeta", {
       threadId,
       kind: "goal_check_in",
@@ -223,7 +236,7 @@ export const createScopedCheckInThread = internalMutation({
     });
     await updateThreadMetadata(ctx, components.agent, {
       threadId,
-      patch: { title: `Check-in · ${pacificDate()}` },
+      patch: { title: `Check-in · ${localDate(settings.timeZone)}` },
     });
     return threadId;
   },
@@ -234,7 +247,7 @@ export const listThreads = query({
   handler: async (ctx) => {
     const result = await ctx.runQuery(
       components.agent.threads.listThreadsByUserId,
-      { userId: USER_ID, order: "desc" },
+      { userId: AGENT_USER_ID, order: "desc" },
     );
     return result.page;
   },
@@ -252,7 +265,7 @@ export const listSidebarItems = query({
     const threads = await ctx.runQuery(
       components.agent.threads.listThreadsByUserId,
       {
-        userId: USER_ID,
+        userId: AGENT_USER_ID,
         order: "desc",
         paginationOpts: { cursor: null, numItems: 100 },
       },
@@ -413,6 +426,10 @@ async function buildDynamicContext(
   ctx: { runQuery: import("../_generated/server").ActionCtx["runQuery"] },
   opts: { scopeGoalIds?: string[] } = {},
 ): Promise<string> {
+  const settings: UserSettingsView = await ctx.runQuery(
+    internal.userSettings.getInternal,
+    {},
+  );
   const activeLtgs: Doc<"longTermGoals">[] = await ctx.runQuery(
     internal.chat.lookups.listActiveLtgs,
     {},
@@ -430,7 +447,7 @@ async function buildDynamicContext(
     {},
   );
 
-  const today = pacificDate();
+  const today = localDate(settings.timeZone);
 
   const ltgLines =
     activeLtgs.length === 0
@@ -438,7 +455,7 @@ async function buildDynamicContext(
       : activeLtgs.map(formatLtgLine).join("\n");
 
   // For scoped check-ins, filter open goals to just the ones in scope.
-  // The agent only sees what's relevant to the bundle that pinged Kyle.
+  // The agent only sees what's relevant to the bundle that prompted this chat.
   const filteredOpenGoals = opts.scopeGoalIds
     ? openGoals.filter((g) => opts.scopeGoalIds!.includes(g._id))
     : openGoals;
@@ -468,10 +485,11 @@ async function buildDynamicContext(
           })
           .join("\n");
 
-  return `${ABOUT_KYLE_SYSTEM}
+  return `${buildUserSystemPrompt(settings)}
 
 <current-state>
 Today: ${today}
+User time zone: ${settings.timeZone}
 
 Active long-term goals:
 ${ltgLines}
@@ -620,7 +638,7 @@ export const backfillMissingTitles = internalAction({
     const result = await ctx.runQuery(
       components.agent.threads.listThreadsByUserId,
       {
-        userId: USER_ID,
+        userId: AGENT_USER_ID,
         order: "desc",
         paginationOpts: { cursor: null, numItems: 500 },
       },
