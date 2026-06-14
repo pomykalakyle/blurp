@@ -1,13 +1,23 @@
 import { ClipboardCheck } from "lucide-react";
+import type { SidebarSelection } from "../sidebarSelection";
+import { ActivationConversation } from "../components/chat/ActivationConversation";
 import { Conversation } from "../components/chat/Conversation";
 
 type Props = {
-  threadId: string | null;
+  selectedTarget: SidebarSelection;
   onThreadCreated: (id: string) => void;
   onNewCheckIn: () => void;
 };
 
-export function ChatScreen({ threadId, onThreadCreated, onNewCheckIn }: Props) {
+export function ChatScreen({
+  selectedTarget,
+  onThreadCreated,
+  onNewCheckIn,
+}: Props) {
+  if (selectedTarget.type === "activation") {
+    return <ActivationConversation activationId={selectedTarget.activationId} />;
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-end border-b border-soft bg-base px-4 py-2 md:px-6">
@@ -19,7 +29,10 @@ export function ChatScreen({ threadId, onThreadCreated, onNewCheckIn }: Props) {
         </button>
       </div>
       <div className="min-h-0 flex-1">
-        <Conversation threadId={threadId} onThreadCreated={onThreadCreated} />
+        <Conversation
+          threadId={selectedTarget.threadId}
+          onThreadCreated={onThreadCreated}
+        />
       </div>
     </div>
   );
