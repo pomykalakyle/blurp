@@ -18,7 +18,7 @@ export type Section =
   | "chat"
   | "narrative"
   | "checkIn"
-  | "agentRuns"
+  | "agentActivations"
   | "settings";
 
 const SECTION_LABELS: Record<Section, string> = {
@@ -26,7 +26,7 @@ const SECTION_LABELS: Record<Section, string> = {
   chat: "Chat",
   narrative: "Narrative",
   checkIn: "Check-in",
-  agentRuns: "Agent Runs",
+  agentActivations: "Activations",
   settings: "Settings",
 };
 
@@ -35,7 +35,7 @@ const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
   { id: "chat", icon: MessageSquare },
   { id: "narrative", icon: BookOpen },
   { id: "goals", icon: Target },
-  { id: "agentRuns", icon: Activity },
+  { id: "agentActivations", icon: Activity },
 ];
 
 const FOOTER_ITEMS: Array<{ id: Section; icon: typeof Target }> = [

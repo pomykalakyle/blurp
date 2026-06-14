@@ -4,9 +4,9 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 crons.cron(
-  "plan daily heartbeat agent runs",
+  "plan daily heartbeats",
   "5 0 * * *",
-  internal.agentRuns.planDailyHeartbeats,
+  internal.agentActivations.planDailyHeartbeats,
   {},
 );
 

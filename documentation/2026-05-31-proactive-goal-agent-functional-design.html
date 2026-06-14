@@ -409,6 +409,9 @@
       <p class="summary">
         Blurp should stop acting like a passive goal ledger. It should become an active thinking partner that notices drift, finds useful openings, follows up when timing matters, and learns what actually helps Kyle move toward the goals he cares about.
       </p>
+      <p class="summary">
+        This document defines the user-facing product behavior for that change. It does not define the technical implementation details behind the agent, memory, scheduling, prompts, tools, or storage.
+      </p>
       <div class="doc-meta">
         <span class="tag">Date: 2026-05-31</span>
         <span class="tag">Status: Product direction draft</span>
@@ -447,6 +450,7 @@
                 <h4>Functionality not being removed</h4>
                 <ul>
                   <li>Long-term goals and short-term goals remain part of the product.</li>
+                  <li>Goal creation and editing remain the same.</li>
                   <li>Goal dates, outcomes, notes, and changes remain part of the goal landscape Blurp reasons from.</li>
                   <li>Kyle can still use goals to name what he is trying to move toward.</li>
                 </ul>
@@ -454,7 +458,7 @@
               <div class="card">
                 <h3>Replacement behavior</h3>
                 <ul>
-                  <li>Heartbeat runs and contextual runs give Blurp recurring chances to think and decide what, if anything, to do.</li>
+                  <li>Heartbeats and tasks give Blurp recurring chances to think and decide what, if anything, to do.</li>
                   <li>The agent learns what helps Kyle move toward his goals.</li>
                   <li>Blurp builds a psychological model of Kyle oriented around helping him move toward the goals he cares about.</li>
                   <li>Proactive contact appears as a normal chat thread and phone ping.</li>
@@ -464,17 +468,17 @@
           </div>
         </section>
 
-        <section id="run-scheduling">
-          <h2>Run Scheduling</h2>
-          <div class="subsection" id="heartbeat-runs">
-            <h3>Heartbeat Runs</h3>
+        <section id="scheduling">
+          <h2>Scheduling</h2>
+          <div class="subsection" id="heartbeats">
+            <h3>Heartbeats</h3>
             <p>
-              Blurp starts with three regular agent runs each day. These are scheduled chances for the agent to think, independent of any individual goal deadline.
+              Blurp starts with three heartbeats each day. Each heartbeat is a scheduled activation for the agent to think, independent of any individual goal deadline.
             </p>
             <table>
               <thead>
                 <tr>
-                  <th>Run time</th>
+                  <th>Time</th>
                   <th>Cadence note</th>
                 </tr>
               </thead>
@@ -485,69 +489,75 @@
                 </tr>
                 <tr>
                   <td>1:30pm Eastern</td>
-                  <td>Default daily run slot.</td>
+                  <td>Default daily heartbeat.</td>
                 </tr>
                 <tr>
                   <td>6:30pm Eastern</td>
-                  <td>Default daily run slot before Kyle's sleep window.</td>
+                  <td>Default daily heartbeat before Kyle's sleep window.</td>
                 </tr>
               </tbody>
             </table>
             <div class="callout">
-              These times are defaults. Blurp can adjust the schedule as it learns when agent runs are useful.
+              These times are defaults. Blurp can adjust the schedule as it learns when agent activations are useful.
             </div>
           </div>
 
-          <div class="subsection" id="contextual-runs">
-            <h3>Contextual Runs</h3>
+          <div class="subsection" id="tasks">
+            <h3>Tasks</h3>
             <p>
-              Blurp can schedule runs outside the daily heartbeat cadence. These runs have a specific time and a short piece of context explaining why the agent is running then.
+              Blurp can schedule tasks outside the daily heartbeat cadence. Each task has a specific time and a brief explaining why the agent should become active then.
             </p>
             <p>
-              The context can come from conversation, goals, outside events, or the agent's own prior work. It gives Blurp the right starting point when that run begins.
+              The brief can come from conversation, goals, outside events, or the agent's own prior work. It gives Blurp the right starting point when that task begins.
             </p>
             <ul>
-              <li>Run after Kyle expects to be back from a date, with the date as context.</li>
-              <li>Run near the time of a local-government event, with the event link or description as context.</li>
-              <li>Run before an opportunity window closes, with the relevant goal and deadline as context.</li>
-              <li>Run to revisit an event schedule Blurp has been tracking, with the reason it might matter to Kyle as context.</li>
+              <li>Follow up after Kyle expects to be back from a date, with the date as context.</li>
+              <li>Follow up near the time of a local-government event, with the event link or description as context.</li>
+              <li>Follow up before an opportunity window closes, with the relevant goal and deadline as context.</li>
+              <li>Revisit an event schedule Blurp has been tracking, with the reason it might matter to Kyle as context.</li>
             </ul>
           </div>
 
-          <div class="subsection" id="creating-contextual-runs">
-            <h3>Creating Contextual Runs</h3>
+          <div class="subsection" id="creating-tasks">
+            <h3>Creating Tasks</h3>
             <p>
-              Blurp has a run-scheduling capability available from ordinary chats and from agent runs. To create a contextual run, the agent gives the system a time and a text context for why that future run should exist.
+              Blurp has a scheduling capability available from ordinary chats and from agent activations. To create a task, the agent gives the system a time and a brief for why that future task should exist.
             </p>
             <p>
-              The scheduling capability includes a context field. The agent writes the handoff text for the future run there, so the future agent knows what situation it is being asked to continue.
+              The scheduling capability includes a brief field. The agent writes the handoff text for the future task there, so the future activation knows what situation it is being asked to continue.
+            </p>
+            <p>
+              Creating a task is an internal agent action. Blurp can schedule one without asking Kyle to confirm it, and pending tasks do not need to appear as user-facing objects. If it is useful in conversation, Blurp may naturally mention that it will check back or revisit something later.
             </p>
           </div>
         </section>
 
-        <section id="agent-run-functionality">
-          <h2>Agent Run Flow</h2>
+        <section id="agent-activation-flow">
+          <h2>Agent Activation Flow</h2>
           <p>
-            This section is organized as the functional flow of an agent run. Read 3.1 through 3.4 as the product-level sequence Blurp follows during a run, while leaving the internal execution model to the technical design.
+            This section describes the product-level sequence of an agent activation: Blurp starts from why the activation exists, learns from relevant recent activity when appropriate, works toward goal progress, and contacts Kyle when that would help. The sequence gives the activation shape without turning it into a fixed-output workflow.
           </p>
-          <div class="subsection" id="orient-run-context">
-            <h3>Start From Run Context</h3>
+          <div class="subsection" id="orient-activation-brief">
+            <h3>Start From Why It Exists</h3>
             <p>
-              Each run starts from the reason it exists. A heartbeat run has broad responsibility for Kyle's current goal landscape. A contextual run starts from its attached context: an event, date, deadline, opportunity window, prior thought, or other scheduled reason.
+              Each activation starts from the reason it exists. A heartbeat has broad responsibility for Kyle's current goal landscape. A task starts from its attached brief: an event, date, deadline, opportunity window, prior thought, or other scheduled reason. The brief gives the activation its starting point, and Blurp can use current context to understand how the situation has changed since the task was scheduled.
             </p>
             <p>
-              The run's job is to improve the odds of progress from that starting point.
+              For heartbeats, Blurp's attention starts from the goal-support mission: find where its work is most likely to help Kyle move toward the goals he cares about.
+            </p>
+            <p>
+              The activation's job is to improve the odds of progress from that starting point.
             </p>
           </div>
 
           <div class="subsection" id="learn-recent-activity">
             <h3>Learn From Recent Activity</h3>
-            <h4>Run scope</h4>
+            <h4>Activation scope</h4>
             <p>
-              Heartbeat runs review recent activity that is ready to become durable learning: new or changed chats, goal outcomes, narrative entries, and other relevant app context.
+              Heartbeats review recent activity that is ready to become durable learning: new or changed chats, goal outcomes, narrative entries, and other relevant app context.
             </p>
             <p>
-              Contextual runs stay focused on their attached context. They can update learning related to that context, while broad review of unrelated activity belongs to heartbeat runs.
+              Tasks stay focused on their attached brief. They can update learning related to that brief, while broad review of unrelated activity belongs to heartbeats.
             </p>
             <h4>What Blurp learns</h4>
             <p>
@@ -560,39 +570,42 @@
               These two forms of learning inform each other. The psychological model helps Blurp choose better strategies, and the results of those strategies update what Blurp understands about Kyle. Both are oriented around helping Kyle move toward the goals he cares about.
             </p>
             <p>
-              Natural-language steering is part of recent activity. When Kyle corrects Blurp, asks it to slow down, tells it to stop pursuing a topic, replies later, stays silent, shows interest, says a message was useful or annoying, or changes how he wants the agent to behave, Blurp carries that forward into future runs, contact decisions, and its internal model of Kyle.
+              Natural-language steering is part of recent activity. When Kyle corrects Blurp, asks it to slow down, tells it to stop pursuing a topic, replies later, stays silent, shows interest, says a message was useful or annoying, or changes how he wants the agent to behave, Blurp carries that forward into future activations, contact decisions, and its internal model of Kyle.
             </p>
             <p>
-              When a goal outcome or follow-through pattern is informative, Blurp can treat it as a retrospective: understand what happened, update its strategy, and carry the learning into future runs.
+              When a goal outcome or follow-through pattern is informative, Blurp can treat it as a retrospective: understand what happened, update its strategy, and carry the learning into future activations.
             </p>
           </div>
 
           <div class="subsection" id="work-goal-problem">
             <h3>Pursue Goal Progress</h3>
             <p>
-              During this phase, Blurp works through what would make progress more likely. This is the agentic work session inside the run: Blurp has a purpose and context, but its exact path emerges from what it discovers while working.
+              During this phase, Blurp works through what would make progress more likely. This is the agentic work session inside the activation: Blurp has a purpose and context, but its exact path emerges from what it discovers while working.
             </p>
             <p>
-              Blurp can reason, revise its strategy, and continue exploring as the situation develops. It also has tools available during this phase, including capabilities such as researching outside information, inspecting available app context, scheduling another run, or using other useful tools added over time.
+              Blurp can reason, revise its strategy, and continue exploring as the situation develops. It also has tools available during this phase, including capabilities such as researching outside information, inspecting available app context, scheduling a task, or using other useful tools added over time.
             </p>
             <p>
               The work can be iterative. Blurp might research an event, learn that it is more relevant than expected, then decide to involve Kyle. Or it might investigate an opportunity and carry what it learned forward for a better moment.
+            </p>
+            <p>
+              The useful shape of an activation comes from the work itself rather than from a predefined result it must produce. For example, Blurp may contact Kyle, keep working internally, schedule a task, or simply finish after doing enough for that moment.
             </p>
           </div>
 
           <div class="subsection" id="contact-kyle">
             <h3>Contact Kyle When Useful</h3>
             <p>
-              If a run needs Kyle's attention, Blurp creates a normal chat thread in the existing chat list and sends a phone notification that opens it. The opening message should fit what the run found useful to say in that moment, such as a question, finding, proposed direction, follow-up, or another useful form of contact.
+              If an activation needs Kyle's attention, Blurp creates a new ordinary chat thread and sends a phone notification that opens it. The opening message should fit what the activation found useful to say in that moment, such as a question, finding, proposed direction, follow-up, or another useful form of contact.
             </p>
             <p>
-              Contact is one possible action during a run. Blurp reaches out when, based on the reason for the run, what it found while working, Kyle's goals, and what it has learned about how to help him, involving Kyle seems likely to help him move toward a goal, clarify something the agent cannot resolve alone, or preserve useful momentum. A run can also save learning, schedule another run, continue working, or let the thread of work rest.
+              Contact is one possible action during an activation. Blurp reaches out when, based on the reason for the activation, what it found while working, Kyle's goals, and what it has learned about how to help him, involving Kyle seems likely to help him move toward a goal, clarify something the agent cannot resolve alone, or preserve useful momentum. An activation can also save learning, schedule a task, continue working, or let the thread of work rest.
             </p>
             <p>
-              Blurp's contact judgment improves from Kyle's reactions. If Kyle responds better at certain times, ignores certain kinds of outreach, or says a kind of contact is annoying, future runs should use that learning when deciding whether and how to contact him.
+              Blurp's contact judgment improves from Kyle's reactions. If Kyle responds better at certain times, ignores certain kinds of outreach, or says a kind of contact is annoying, future activations should use that learning when deciding whether and how to contact him.
             </p>
             <p>
-              The thread behaves like any other chat. Kyle can reply, ignore it, accept proposals, dismiss proposals, or steer it somewhere else in natural language, and Blurp can learn from what happens afterward.
+              The new thread behaves like any other chat. Kyle can reply, ignore it, accept proposals, dismiss proposals, or steer it somewhere else in natural language, and Blurp can learn from what happens afterward.
             </p>
           </div>
         </section>
@@ -600,11 +613,14 @@
         <section id="out-of-scope">
           <h2>Out of Scope</h2>
           <p>
-            The exact model for storing Blurp's learnings about Kyle belongs in a separate technical design. That document should cover the memory system, chat-history search, psychological-model storage, update mechanics, and retrieval behavior that support the product behavior described here.
+            Technical implementation details are handled in a separate technical design. This document does not define internal prompts, memory architecture, tool contracts, scheduling mechanics, storage models, orchestration, attention policy, or exact control semantics.
           </p>
-          <p>
-            The technical design should also decide how the learning phase and goal-progress phase are orchestrated internally, including whether they run as one agent, separate agents, or another execution structure.
-          </p>
+          <ul>
+            <li><strong>Memory and learning storage:</strong> the memory system, chat-history search, psychological-model storage, update mechanics, and retrieval behavior that support the product behavior described here.</li>
+            <li><strong>Agent execution structure:</strong> whether learning and goal-progress work executes as one agent, separate agents, or another execution structure.</li>
+            <li><strong>Attention policy:</strong> the internal method for choosing where to place attention during an activation.</li>
+            <li><strong>Activation inspection and management:</strong> UI for seeing pending activations, reviewing past activations, editing or canceling scheduled tasks, or viewing why an activation happened.</li>
+          </ul>
         </section>
       </div>
 
@@ -613,12 +629,12 @@
         <a href="#product-direction">Product Direction</a>
         <a class="subnav" href="#thesis">1.1 Active Goal-Seeking</a>
         <a class="subnav" href="#deprecated">1.2 Model Shift</a>
-        <a href="#run-scheduling">Run Scheduling</a>
-        <a class="subnav" href="#heartbeat-runs">2.1 Heartbeat Runs</a>
-        <a class="subnav" href="#contextual-runs">2.2 Contextual Runs</a>
-        <a class="subnav" href="#creating-contextual-runs">2.3 Creating Contextual Runs</a>
-        <a href="#agent-run-functionality">Agent Run Flow</a>
-        <a class="subnav" href="#orient-run-context">3.1 Start From Run Context</a>
+        <a href="#scheduling">Scheduling</a>
+        <a class="subnav" href="#heartbeats">2.1 Heartbeats</a>
+        <a class="subnav" href="#tasks">2.2 Tasks</a>
+        <a class="subnav" href="#creating-tasks">2.3 Creating Tasks</a>
+        <a href="#agent-activation-flow">Agent Activation Flow</a>
+        <a class="subnav" href="#orient-activation-brief">3.1 Start From Why It Exists</a>
         <a class="subnav" href="#learn-recent-activity">3.2 Learn From Recent Activity</a>
         <a class="subnav" href="#work-goal-problem">3.3 Pursue Goal Progress</a>
         <a class="subnav" href="#contact-kyle">3.4 Contact Kyle When Useful</a>
