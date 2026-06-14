@@ -215,10 +215,7 @@ export const planDailyHeartbeats = internalMutation({
         enabled: false,
         scheduled: 0,
         skippedExisting: 0,
-        heartbeatUtcMinutes:
-          config.dailyHeartbeatUtcMinutes ??
-          config.dailyRunTimesUtcMinutes ??
-          DEFAULT_HEARTBEAT_UTC_MINUTES,
+        heartbeatUtcMinutes: config.dailyHeartbeatUtcMinutes,
       };
     }
 
@@ -242,13 +239,9 @@ export const planDailyHeartbeats = internalMutation({
 
     let scheduled = 0;
     let skippedExisting = 0;
-    const configuredHeartbeatUtcMinutes =
-      config.dailyHeartbeatUtcMinutes ??
-      config.dailyRunTimesUtcMinutes ??
-      DEFAULT_HEARTBEAT_UTC_MINUTES;
     const normalizedHeartbeatTimes = Array.from(
       new Set(
-        configuredHeartbeatUtcMinutes.filter(
+        config.dailyHeartbeatUtcMinutes.filter(
           (minute) => Number.isInteger(minute) && minute >= 0 && minute < 1440,
         ),
       ),
