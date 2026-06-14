@@ -17,7 +17,7 @@ import {
   proactiveAgent,
 } from "./proactiveAgent";
 
-const runStatusValidator = v.union(
+const activationStatusValidator = v.union(
   v.literal("scheduled"),
   v.literal("running"),
   v.literal("completed"),
@@ -28,12 +28,12 @@ const runStatusValidator = v.union(
 const sourceTypeValidator = v.union(
   v.literal("heartbeat_planner"),
   v.literal("ordinary_chat"),
-  v.literal("agent_run"),
+  v.literal("agent_activation"),
 );
 
-const runKindValidator = v.union(
+const activationKindValidator = v.union(
   v.literal("heartbeat"),
-  v.literal("contextual"),
+  v.literal("task"),
 );
 
 const DEFAULT_HEARTBEAT_UTC_MINUTES = [
@@ -44,136 +44,139 @@ const DEFAULT_HEARTBEAT_UTC_MINUTES = [
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const runnableRunValidator = v.object({
-  _id: v.id("agentRuns"),
+const runnableActivationValidator = v.object({
+  _id: v.id("agentActivations"),
   _creationTime: v.number(),
-  kind: runKindValidator,
-  status: runStatusValidator,
-  runAt: v.number(),
+  kind: activationKindValidator,
+  status: activationStatusValidator,
+  scheduledAt: v.number(),
   scheduledFunctionId: v.union(v.id("_scheduled_functions"), v.null()),
-  handoffContext: v.union(v.string(), v.null()),
+  brief: v.union(v.string(), v.null()),
   sourceType: sourceTypeValidator,
   agentThreadId: v.string(),
 });
 
-const agentRunViewValidator = v.object({
-  _id: v.id("agentRuns"),
+const agentActivationViewValidator = v.object({
+  _id: v.id("agentActivations"),
   _creationTime: v.number(),
-  kind: runKindValidator,
-  status: runStatusValidator,
-  runAt: v.number(),
+  kind: activationKindValidator,
+  status: activationStatusValidator,
+  scheduledAt: v.number(),
   scheduledFunctionId: v.union(v.id("_scheduled_functions"), v.null()),
-  handoffContext: v.union(v.string(), v.null()),
+  brief: v.union(v.string(), v.null()),
   sourceType: sourceTypeValidator,
   agentThreadId: v.string(),
 });
 
-async function createScheduledRun(
+async function createScheduledActivation(
   ctx: MutationCtx,
   args: {
-    kind: "heartbeat" | "contextual";
-    runAt: number;
-    handoffContext: string | null;
-    sourceType: "heartbeat_planner" | "ordinary_chat" | "agent_run";
+    kind: "heartbeat" | "task";
+    scheduledAt: number;
+    brief: string | null;
+    sourceType: "heartbeat_planner" | "ordinary_chat" | "agent_activation";
   },
 ): Promise<{
-  agentRunId: Id<"agentRuns">;
-  runAt: number;
+  agentActivationId: Id<"agentActivations">;
+  scheduledAt: number;
   agentThreadId: string;
 }> {
   const agentThreadId = await agentCreateThread(ctx, components.agent, {
-    title: `Proactive ${args.kind} run · ${new Date(args.runAt).toISOString()}`,
-    summary: args.handoffContext ?? undefined,
+    title: `Proactive ${args.kind} · ${new Date(args.scheduledAt).toISOString()}`,
+    summary: args.brief ?? undefined,
   });
   await updateThreadMetadata(ctx, components.agent, {
     threadId: agentThreadId,
     patch: { status: "active" },
   });
 
-  const agentRunId: Id<"agentRuns"> = await ctx.db.insert("agentRuns", {
+  const agentActivationId: Id<"agentActivations"> = await ctx.db.insert("agentActivations", {
     kind: args.kind,
     status: "scheduled",
-    runAt: args.runAt,
+    scheduledAt: args.scheduledAt,
     scheduledFunctionId: null,
-    handoffContext: args.handoffContext,
+    brief: args.brief,
     sourceType: args.sourceType,
     agentThreadId,
   });
 
   const scheduledFunctionId: Id<"_scheduled_functions"> =
-    await ctx.scheduler.runAt(args.runAt, internal.agentRuns.execute, {
-      agentRunId,
+    await ctx.scheduler.runAt(args.scheduledAt, internal.agentActivations.execute, {
+      agentActivationId,
     });
-  await ctx.db.patch(agentRunId, { scheduledFunctionId });
+  await ctx.db.patch(agentActivationId, { scheduledFunctionId });
 
-  return { agentRunId, runAt: args.runAt, agentThreadId };
+  return { agentActivationId, scheduledAt: args.scheduledAt, agentThreadId };
 }
 
 export const listForDashboard = query({
   args: {},
   returns: v.object({
-    upcoming: v.array(agentRunViewValidator),
-    recent: v.array(agentRunViewValidator),
+    upcoming: v.array(agentActivationViewValidator),
+    recent: v.array(agentActivationViewValidator),
   }),
   handler: async (ctx) => {
     const now = Date.now();
     const upcoming = await ctx.db
-      .query("agentRuns")
-      .withIndex("by_status_and_runAt", (q) =>
-        q.eq("status", "scheduled").gte("runAt", now),
+      .query("agentActivations")
+      .withIndex("by_status_and_scheduledAt", (q) =>
+        q.eq("status", "scheduled").gte("scheduledAt", now),
       )
       .order("asc")
       .take(20);
-    const all = await ctx.db.query("agentRuns").collect();
+    const all = await ctx.db.query("agentActivations").collect();
     const recent = all
       .slice()
-      .sort((a, b) => b.runAt - a.runAt || b._creationTime - a._creationTime)
+      .sort(
+        (a, b) =>
+          b.scheduledAt - a.scheduledAt || b._creationTime - a._creationTime,
+      )
       .slice(0, 50);
     return { upcoming, recent };
   },
 });
 
-export const listRunMessages = query({
-  args: { agentRunId: v.id("agentRuns") },
+export const listActivationMessages = query({
+  args: { agentActivationId: v.id("agentActivations") },
   returns: v.any(),
   handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.agentRunId);
-    if (!run) {
-      return { run: null, messages: [] };
+    const activation = await ctx.db.get(args.agentActivationId);
+    if (!activation) {
+      return { activation: null, messages: [] };
     }
     const messages = await ctx.runQuery(
       components.agent.messages.listMessagesByThreadId,
       {
-        threadId: run.agentThreadId,
+        threadId: activation.agentThreadId,
         order: "asc",
         paginationOpts: { cursor: null, numItems: 100 },
       },
     );
-    return { run, messages: messages.page };
+    return { activation, messages: messages.page };
   },
 });
 
-export const scheduleContextual = internalMutation({
+export const scheduleTask = internalMutation({
   args: {
-    runAt: v.string(),
-    handoffContext: v.string(),
+    scheduledAt: v.string(),
+    brief: v.string(),
     sourceType: sourceTypeValidator,
   },
   returns: v.object({
-    agentRunId: v.id("agentRuns"),
-    runAt: v.number(),
+    agentActivationId: v.id("agentActivations"),
+    scheduledAt: v.number(),
     agentThreadId: v.string(),
   }),
   handler: async (ctx, args) => {
-    const runAt = Date.parse(args.runAt);
-    if (Number.isNaN(runAt)) {
-      throw new Error(`Invalid contextual run datetime: ${args.runAt}`);
+    const scheduledAt = Date.parse(args.scheduledAt);
+    if (Number.isNaN(scheduledAt)) {
+      throw new Error(`Invalid task datetime: ${args.scheduledAt}`);
     }
 
-    return await createScheduledRun(ctx, {
-      kind: "contextual",
-      runAt,
-      handoffContext: args.handoffContext,
+    return await createScheduledActivation(ctx, {
+      kind: "task",
+      scheduledAt,
+      brief: args.brief,
       sourceType: args.sourceType,
     });
   },
@@ -185,7 +188,7 @@ export const planDailyHeartbeats = internalMutation({
     enabled: v.boolean(),
     scheduled: v.number(),
     skippedExisting: v.number(),
-    runTimesUtcMinutes: v.array(v.number()),
+    heartbeatUtcMinutes: v.array(v.number()),
   }),
   handler: async (ctx) => {
     const now = Date.now();
@@ -200,7 +203,7 @@ export const planDailyHeartbeats = internalMutation({
         const configId = await ctx.db.insert("heartbeatScheduleConfig", {
           key: "default",
           enabled: true,
-          dailyRunTimesUtcMinutes: DEFAULT_HEARTBEAT_UTC_MINUTES,
+          dailyHeartbeatUtcMinutes: DEFAULT_HEARTBEAT_UTC_MINUTES,
           updatedAt: now,
           updatedBy: "system" as const,
         });
@@ -212,7 +215,7 @@ export const planDailyHeartbeats = internalMutation({
         enabled: false,
         scheduled: 0,
         skippedExisting: 0,
-        runTimesUtcMinutes: config.dailyRunTimesUtcMinutes,
+        heartbeatUtcMinutes: config.dailyHeartbeatUtcMinutes,
       };
     }
 
@@ -221,35 +224,40 @@ export const planDailyHeartbeats = internalMutation({
     const dayStartMs = dayStart.getTime();
     const dayEndMs = dayStartMs + DAY_MS;
 
-    const existingRuns = await ctx.db
-      .query("agentRuns")
-      .withIndex("by_kind_and_runAt", (q) =>
-        q.eq("kind", "heartbeat").gte("runAt", dayStartMs).lt("runAt", dayEndMs),
+    const existingActivations = await ctx.db
+      .query("agentActivations")
+      .withIndex("by_kind_and_scheduledAt", (q) =>
+        q
+          .eq("kind", "heartbeat")
+          .gte("scheduledAt", dayStartMs)
+          .lt("scheduledAt", dayEndMs),
       )
       .collect();
-    const existingRunTimes = new Set(existingRuns.map((run) => run.runAt));
+    const existingHeartbeatTimes = new Set(
+      existingActivations.map((activation) => activation.scheduledAt),
+    );
 
     let scheduled = 0;
     let skippedExisting = 0;
-    const normalizedRunTimes = Array.from(
+    const normalizedHeartbeatTimes = Array.from(
       new Set(
-        config.dailyRunTimesUtcMinutes.filter(
+        config.dailyHeartbeatUtcMinutes.filter(
           (minute) => Number.isInteger(minute) && minute >= 0 && minute < 1440,
         ),
       ),
     ).sort((a, b) => a - b);
 
-    for (const minute of normalizedRunTimes) {
-      const runAt = dayStartMs + minute * 60 * 1000;
-      if (runAt <= now || existingRunTimes.has(runAt)) {
-        if (existingRunTimes.has(runAt)) skippedExisting += 1;
+    for (const minute of normalizedHeartbeatTimes) {
+      const scheduledAt = dayStartMs + minute * 60 * 1000;
+      if (scheduledAt <= now || existingHeartbeatTimes.has(scheduledAt)) {
+        if (existingHeartbeatTimes.has(scheduledAt)) skippedExisting += 1;
         continue;
       }
 
-      await createScheduledRun(ctx, {
+      await createScheduledActivation(ctx, {
         kind: "heartbeat",
-        runAt,
-        handoffContext: null,
+        scheduledAt,
+        brief: null,
         sourceType: "heartbeat_planner",
       });
       scheduled += 1;
@@ -259,51 +267,54 @@ export const planDailyHeartbeats = internalMutation({
       enabled: true,
       scheduled,
       skippedExisting,
-      runTimesUtcMinutes: normalizedRunTimes,
+      heartbeatUtcMinutes: normalizedHeartbeatTimes,
     };
   },
 });
 
 export const markRunning = internalMutation({
-  args: { agentRunId: v.id("agentRuns") },
-  returns: v.union(runnableRunValidator, v.null()),
+  args: { agentActivationId: v.id("agentActivations") },
+  returns: v.union(runnableActivationValidator, v.null()),
   handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.agentRunId);
-    if (!run || run.status !== "scheduled") {
+    const activation = await ctx.db.get(args.agentActivationId);
+    if (!activation || activation.status !== "scheduled") {
       return null;
     }
-    await ctx.db.patch(args.agentRunId, { status: "running" });
-    return { ...run, status: "running" as const };
+    await ctx.db.patch(args.agentActivationId, { status: "running" });
+    return { ...activation, status: "running" as const };
   },
 });
 
 export const markCompleted = internalMutation({
-  args: { agentRunId: v.id("agentRuns") },
+  args: { agentActivationId: v.id("agentActivations") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.agentRunId);
-    if (!run || run.status !== "running") {
+    const activation = await ctx.db.get(args.agentActivationId);
+    if (!activation || activation.status !== "running") {
       return null;
     }
-    await ctx.db.patch(args.agentRunId, { status: "completed" });
+    await ctx.db.patch(args.agentActivationId, { status: "completed" });
     return null;
   },
 });
 
 export const markFailed = internalMutation({
-  args: { agentRunId: v.id("agentRuns") },
+  args: { agentActivationId: v.id("agentActivations") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.agentRunId);
-    if (!run || (run.status !== "scheduled" && run.status !== "running")) {
+    const activation = await ctx.db.get(args.agentActivationId);
+    if (
+      !activation ||
+      (activation.status !== "scheduled" && activation.status !== "running")
+    ) {
       return null;
     }
-    await ctx.db.patch(args.agentRunId, { status: "failed" });
+    await ctx.db.patch(args.agentActivationId, { status: "failed" });
     return null;
   },
 });
 
-export const currentStateForRun = internalQuery({
+export const currentStateForActivation = internalQuery({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
@@ -375,42 +386,42 @@ ${entryLines}
 });
 
 export const execute = internalAction({
-  args: { agentRunId: v.id("agentRuns") },
+  args: { agentActivationId: v.id("agentActivations") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const run = await ctx.runMutation(internal.agentRuns.markRunning, {
-      agentRunId: args.agentRunId,
+    const activation = await ctx.runMutation(internal.agentActivations.markRunning, {
+      agentActivationId: args.agentActivationId,
     });
-    if (run === null) {
+    if (activation === null) {
       return null;
     }
 
     try {
       const currentState: string = await ctx.runQuery(
-        internal.agentRuns.currentStateForRun,
+        internal.agentActivations.currentStateForActivation,
         {},
       );
-      const prompt = `<proactive-run>
-Run id: ${run._id}
-Run kind: ${run.kind}
-Source: ${run.sourceType}
-Scheduled time: ${new Date(run.runAt).toISOString()}
+      const prompt = `<proactive-activation>
+Activation id: ${activation._id}
+Activation kind: ${activation.kind}
+Source: ${activation.sourceType}
+Scheduled time: ${new Date(activation.scheduledAt).toISOString()}
 
-Handoff context:
-${run.handoffContext ?? "(none)"}
-</proactive-run>
+Brief:
+${activation.brief ?? "(none)"}
+</proactive-activation>
 
 ${currentState}`;
 
       const result = await proactiveAgent.generateText(
         ctx,
-        { threadId: run.agentThreadId },
+        { threadId: activation.agentThreadId },
         {
           prompt,
           providerOptions: PROACTIVE_PROVIDER_OPTIONS,
           onStepFinish: (step) => {
-            console.log("[agent-run] step finished:", {
-              agentRunId: run._id,
+            console.log("[agent-activation] step finished:", {
+              agentActivationId: activation._id,
               finishReason: step.finishReason,
               toolCalls: step.toolCalls?.map((c) => ({
                 toolName: c.toolName,
@@ -424,22 +435,22 @@ ${currentState}`;
         { storageOptions: { saveMessages: "all" } },
       );
 
-      console.log("[agent-run] completed", {
-        agentRunId: run._id,
+      console.log("[agent-activation] completed", {
+        agentActivationId: activation._id,
         finishReason: result.finishReason,
         textLength: result.text.length,
       });
 
-      await ctx.runMutation(internal.agentRuns.markCompleted, {
-        agentRunId: args.agentRunId,
+      await ctx.runMutation(internal.agentActivations.markCompleted, {
+        agentActivationId: args.agentActivationId,
       });
     } catch (error) {
-      console.error("[agent-run] failed", {
-        agentRunId: run._id,
+      console.error("[agent-activation] failed", {
+        agentActivationId: activation._id,
         error,
       });
-      await ctx.runMutation(internal.agentRuns.markFailed, {
-        agentRunId: args.agentRunId,
+      await ctx.runMutation(internal.agentActivations.markFailed, {
+        agentActivationId: args.agentActivationId,
       });
     }
 

@@ -5,7 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Doc, Id } from "../../convex/_generated/dataModel";
 import { FONT_DISPLAY } from "../components/ui";
 
-type AgentRun = Doc<"agentRuns">;
+type AgentActivation = Doc<"agentActivations">;
 type TraceMessage = Record<string, any>;
 
 function formatDateTime(ms: number): string {
@@ -27,7 +27,7 @@ function formatRelative(ms: number): string {
   return diff >= 0 ? `in ${days}d` : `${days}d ago`;
 }
 
-function statusClass(status: AgentRun["status"]): string {
+function statusClass(status: AgentActivation["status"]): string {
   switch (status) {
     case "scheduled":
       return "text-accent-strong bg-accent-tint border-accent";
@@ -42,7 +42,7 @@ function statusClass(status: AgentRun["status"]): string {
   }
 }
 
-function RunStatusBadge({ status }: { status: AgentRun["status"] }) {
+function ActivationStatusBadge({ status }: { status: AgentActivation["status"] }) {
   return (
     <span
       className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium uppercase tracking-widest ${statusClass(status)}`}
@@ -52,12 +52,12 @@ function RunStatusBadge({ status }: { status: AgentRun["status"] }) {
   );
 }
 
-function RunListItem({
-  run,
+function ActivationListItem({
+  activation,
   selected,
   onSelect,
 }: {
-  run: AgentRun;
+  activation: AgentActivation;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -74,17 +74,21 @@ function RunListItem({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-cream capitalize">
-              {run.kind}
+              {activation.kind}
             </span>
-            <span className="text-xs text-faint">{formatRelative(run.runAt)}</span>
+            <span className="text-xs text-faint">
+              {formatRelative(activation.scheduledAt)}
+            </span>
           </div>
-          <div className="mt-1 text-xs text-muted">{formatDateTime(run.runAt)}</div>
+          <div className="mt-1 text-xs text-muted">
+            {formatDateTime(activation.scheduledAt)}
+          </div>
         </div>
-        <RunStatusBadge status={run.status} />
+        <ActivationStatusBadge status={activation.status} />
       </div>
-      {run.handoffContext && (
+      {activation.brief && (
         <div className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted">
-          {run.handoffContext}
+          {activation.brief}
         </div>
       )}
     </button>
@@ -385,7 +389,7 @@ function TraceMessageCard({
   );
 }
 
-function RunMetadata({ run }: { run: AgentRun }) {
+function ActivationMetadata({ activation }: { activation: AgentActivation }) {
   return (
     <section className="rounded-lg border border-soft bg-surface-soft p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -394,45 +398,49 @@ function RunMetadata({ run }: { run: AgentRun }) {
             className="text-lg font-semibold text-cream"
             style={{ fontFamily: FONT_DISPLAY }}
           >
-            {run.kind === "contextual" ? "Contextual Run" : "Heartbeat Run"}
+            {activation.kind === "task" ? "Task" : "Heartbeat"}
           </h2>
-          <p className="mt-1 text-sm text-muted">{formatDateTime(run.runAt)}</p>
+          <p className="mt-1 text-sm text-muted">
+            {formatDateTime(activation.scheduledAt)}
+          </p>
         </div>
-        <RunStatusBadge status={run.status} />
+        <ActivationStatusBadge status={activation.status} />
       </div>
 
       <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase tracking-widest text-faint">Run ID</dt>
-          <dd className="mt-1 break-all text-dim">{run._id}</dd>
+          <dt className="text-xs uppercase tracking-widest text-faint">
+            Activation ID
+          </dt>
+          <dd className="mt-1 break-all text-dim">{activation._id}</dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-widest text-faint">
             Agent Thread ID
           </dt>
-          <dd className="mt-1 break-all text-dim">{run.agentThreadId}</dd>
+          <dd className="mt-1 break-all text-dim">{activation.agentThreadId}</dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-widest text-faint">Source</dt>
-          <dd className="mt-1 text-dim">{run.sourceType}</dd>
+          <dd className="mt-1 text-dim">{activation.sourceType}</dd>
         </div>
         <div>
           <dt className="text-xs uppercase tracking-widest text-faint">
             Scheduled Function
           </dt>
           <dd className="mt-1 break-all text-dim">
-            {run.scheduledFunctionId ?? "none"}
+            {activation.scheduledFunctionId ?? "none"}
           </dd>
         </div>
       </dl>
 
-      {run.handoffContext && (
+      {activation.brief && (
         <div className="mt-4">
           <div className="text-xs uppercase tracking-widest text-faint">
-            Handoff Context
+            Brief
           </div>
           <div className="mt-2 whitespace-pre-wrap rounded-md border border-soft bg-base/50 p-3 text-sm leading-relaxed text-dim">
-            {run.handoffContext}
+            {activation.brief}
           </div>
         </div>
       )}
@@ -440,16 +448,20 @@ function RunMetadata({ run }: { run: AgentRun }) {
   );
 }
 
-function TracePanel({ runId }: { runId: Id<"agentRuns"> | null }) {
+function TracePanel({
+  activationId,
+}: {
+  activationId: Id<"agentActivations"> | null;
+}) {
   const detail = useQuery(
-    api.agentRuns.listRunMessages,
-    runId ? { agentRunId: runId } : "skip",
+    api.agentActivations.listActivationMessages,
+    activationId ? { agentActivationId: activationId } : "skip",
   );
 
-  if (!runId) {
+  if (!activationId) {
     return (
       <div className="rounded-lg border border-dashed border-default p-8 text-center text-muted">
-        Select a run to inspect its internal Convex Agent trace.
+        Select an activation to inspect its internal Convex Agent trace.
       </div>
     );
   }
@@ -462,10 +474,10 @@ function TracePanel({ runId }: { runId: Id<"agentRuns"> | null }) {
     );
   }
 
-  if (!detail.run) {
+  if (!detail.activation) {
     return (
       <div className="rounded-lg border border-danger bg-danger-tint p-4 text-sm text-danger-strong">
-        This run could not be found.
+        This activation could not be found.
       </div>
     );
   }
@@ -474,7 +486,7 @@ function TracePanel({ runId }: { runId: Id<"agentRuns"> | null }) {
 
   return (
     <div className="space-y-4">
-      <RunMetadata run={detail.run} />
+      <ActivationMetadata activation={detail.activation} />
       <section className="rounded-lg border border-soft bg-surface-soft p-4">
         <div className="mb-4 flex items-center gap-2">
           <Terminal size={16} className="text-accent-strong" />
@@ -507,26 +519,25 @@ function TracePanel({ runId }: { runId: Id<"agentRuns"> | null }) {
   );
 }
 
-export function AgentRunsScreen() {
-  const data = useQuery(api.agentRuns.listForDashboard);
-  const [selectedRunId, setSelectedRunId] = useState<Id<"agentRuns"> | null>(
-    null,
-  );
+export function AgentActivationsScreen() {
+  const data = useQuery(api.agentActivations.listForDashboard);
+  const [selectedActivationId, setSelectedActivationId] =
+    useState<Id<"agentActivations"> | null>(null);
 
-  const runs = useMemo(() => {
+  const activations = useMemo(() => {
     if (!data) return [];
     const seen = new Set<string>();
-    return [...data.upcoming, ...data.recent].filter((run) => {
-      if (seen.has(run._id)) return false;
-      seen.add(run._id);
+    return [...data.upcoming, ...data.recent].filter((activation) => {
+      if (seen.has(activation._id)) return false;
+      seen.add(activation._id);
       return true;
     });
   }, [data]);
 
   useEffect(() => {
-    if (selectedRunId || runs.length === 0) return;
-    setSelectedRunId(runs[0]._id);
-  }, [runs, selectedRunId]);
+    if (selectedActivationId || activations.length === 0) return;
+    setSelectedActivationId(activations[0]._id);
+  }, [activations, selectedActivationId]);
 
   if (data === undefined) {
     return (
@@ -543,11 +554,11 @@ export function AgentRunsScreen() {
           className="text-3xl font-semibold leading-tight text-cream md:text-4xl"
           style={{ fontFamily: FONT_DISPLAY }}
         >
-          Agent Runs
+          Agent Activations
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-          Read-only inspection for scheduled runs and the internal background
-          work they perform.
+          Read-only inspection for heartbeats, tasks, and the internal activity
+          they perform.
         </p>
       </header>
 
@@ -560,21 +571,21 @@ export function AgentRunsScreen() {
                 className="text-base font-semibold text-cream"
                 style={{ fontFamily: FONT_DISPLAY }}
               >
-                Upcoming Scheduled Runs
+                Upcoming Activations
               </h2>
             </div>
             {data.upcoming.length === 0 ? (
               <div className="rounded-md border border-dashed border-default p-5 text-sm text-muted">
-                No upcoming scheduled runs.
+                No upcoming activations.
               </div>
             ) : (
               <div className="space-y-2">
-                {data.upcoming.map((run) => (
-                  <RunListItem
-                    key={run._id}
-                    run={run}
-                    selected={selectedRunId === run._id}
-                    onSelect={() => setSelectedRunId(run._id)}
+                {data.upcoming.map((activation) => (
+                  <ActivationListItem
+                    key={activation._id}
+                    activation={activation}
+                    selected={selectedActivationId === activation._id}
+                    onSelect={() => setSelectedActivationId(activation._id)}
                   />
                 ))}
               </div>
@@ -588,21 +599,21 @@ export function AgentRunsScreen() {
                 className="text-base font-semibold text-cream"
                 style={{ fontFamily: FONT_DISPLAY }}
               >
-                Recent Runs
+                Recent Activations
               </h2>
             </div>
             {data.recent.length === 0 ? (
               <div className="rounded-md border border-dashed border-default p-5 text-sm text-muted">
-                No agent runs yet.
+                No agent activations yet.
               </div>
             ) : (
               <div className="max-h-[42rem] space-y-2 overflow-y-auto scroll-thin pr-1">
-                {data.recent.map((run) => (
-                  <RunListItem
-                    key={run._id}
-                    run={run}
-                    selected={selectedRunId === run._id}
-                    onSelect={() => setSelectedRunId(run._id)}
+                {data.recent.map((activation) => (
+                  <ActivationListItem
+                    key={activation._id}
+                    activation={activation}
+                    selected={selectedActivationId === activation._id}
+                    onSelect={() => setSelectedActivationId(activation._id)}
                   />
                 ))}
               </div>
@@ -610,7 +621,7 @@ export function AgentRunsScreen() {
           </section>
         </div>
 
-        <TracePanel runId={selectedRunId} />
+        <TracePanel activationId={selectedActivationId} />
       </div>
     </main>
   );

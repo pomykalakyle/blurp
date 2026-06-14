@@ -4,10 +4,10 @@ import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 
 type ProposedResult = { proposed: true };
-type ScheduledContextualRunResult = {
+type ScheduledTaskResult = {
   scheduled: true;
-  agentRunId: string;
-  runAt: number;
+  activationId: string;
+  scheduledAt: number;
 };
 type LtgLookupResult = {
   id: string;
@@ -110,87 +110,46 @@ function makeProposeTool<I>(opts: {
   });
 }
 
-function makeScheduleContextualRunTool(sourceType: "ordinary_chat" | "agent_run") {
+function makeScheduleTaskTool(sourceType: "ordinary_chat" | "agent_activation") {
   return createTool({
     description:
-      "Schedule a future contextual agent run. Use when a later moment has useful context for helping Kyle move toward his goals. This acts immediately and does not create a proposal card.",
+      "Schedule a future agent task. Use when a later moment has useful context for helping Kyle move toward his goals. This acts immediately and does not create a proposal card.",
     inputSchema: z.object({
-      runAt: z
+      at: z
         .string()
         .describe(
-          "ISO datetime when the contextual run should start. Include the timezone offset, e.g. '2026-06-02T19:45:00-04:00'.",
+          "ISO datetime when the task should start. Include the timezone offset, e.g. '2026-06-02T19:45:00-04:00'.",
         ),
-      context: z
+      brief: z
         .string()
         .describe(
-          "Handoff text for the future agent run: why the run exists, what situation it should continue from, and any goal-specific context it needs.",
+          "Brief for the future agent task: why it exists, what situation it should continue from, and any goal-specific context it needs.",
         ),
     }),
-    execute: async (ctx, input): Promise<ScheduledContextualRunResult> => {
+    execute: async (ctx, input): Promise<ScheduledTaskResult> => {
       const result = await ctx.runMutation(
-        internal.agentRuns.scheduleContextual,
+        internal.agentActivations.scheduleTask,
         {
-          runAt: input.runAt,
-          handoffContext: input.context,
+          scheduledAt: input.at,
+          brief: input.brief,
           sourceType,
         },
       );
       return {
         scheduled: true,
-        agentRunId: result.agentRunId,
-        runAt: result.runAt,
+        activationId: result.agentActivationId,
+        scheduledAt: result.scheduledAt,
       };
     },
   });
 }
 
-export const scheduleContextualRunFromChat =
-  makeScheduleContextualRunTool("ordinary_chat");
-export const scheduleContextualRunFromAgent =
-  makeScheduleContextualRunTool("agent_run");
-
-// Schedule input shape for notification tools. The agent expresses
-// one-off times as ISO datetime strings (any timezone-bearing form);
-// toScheduleStorage converts to a ms timestamp for storage. Daily times
-// are passed as HH:MM and interpreted as Pacific. Shared between the
-// per-entry notification tools and the notifications array on
-// propose_create_goal.
-const scheduleInputSchema = z.union([
-  z.object({
-    kind: z.literal("oneoff"),
-    at: z
-      .string()
-      .describe(
-        "ISO datetime when this notification should fire — include the timezone offset, e.g. '2026-05-25T09:00:00-07:00'. Use Pacific (-07:00 PDT / -08:00 PST) unless Kyle says otherwise.",
-      ),
-  }),
-  z.object({
-    kind: z.literal("daily"),
-    time: z
-      .string()
-      .regex(/^\d{2}:\d{2}$/)
-      .describe(
-        "Daily firing time as 24-hour HH:MM in Pacific — e.g. '08:00' or '19:30'. Re-fires every day until the goal's targetDate passes.",
-      ),
-  }),
-]);
-
-function toScheduleStorage(
-  input: z.infer<typeof scheduleInputSchema>,
-): { kind: "oneoff"; at: number } | { kind: "daily"; time: string } {
-  if (input.kind === "oneoff") {
-    const ms = Date.parse(input.at);
-    if (Number.isNaN(ms)) {
-      throw new Error(`Invalid ISO datetime for one-off notification: ${input.at}`);
-    }
-    return { kind: "oneoff", at: ms };
-  }
-  return { kind: "daily", time: input.time };
-}
+export const scheduleTaskFromChat = makeScheduleTaskTool("ordinary_chat");
+export const scheduleTaskFromAgent = makeScheduleTaskTool("agent_activation");
 
 export const proposeCreateGoal = makeProposeTool({
   description:
-    "Propose adding a new goal to Kyle's list, with its notifications included. Use when you want Kyle to consider tracking a new goal. Every new goal should include at least one notification scheduled after its targetDate — that's the check-in that ensures the goal gets reviewed. Add reminder notifications too when they fit the goal (morning-of nudges, end-of-week pings, etc.). Goal and all its notifications land together when Kyle accepts.",
+    "Propose adding a new goal to Kyle's list. Use when you want Kyle to consider tracking a new goal.",
   inputSchema: z.object({
     title: z.string().describe("Short, action-oriented goal title."),
     type: goalTypeSchema.describe(
@@ -208,20 +167,6 @@ export const proposeCreateGoal = makeProposeTool({
       .string()
       .nullable()
       .describe("Optional ISO date — the target completion deadline."),
-    notifications: z
-      .array(
-        z.object({
-          schedule: scheduleInputSchema,
-          body: z
-            .string()
-            .describe(
-              "Plain-text message for the lock screen — conversational, specific to this entry.",
-            ),
-        }),
-      )
-      .describe(
-        "Notifications to create alongside the goal. Include at least one entry scheduled after targetDate (the runtime treats post-targetDate entries as check-ins). Add reminder entries (pre-targetDate) when they fit. Pass [] only if Kyle explicitly says he doesn't want any.",
-      ),
   }),
   toProposal: (input) => ({
     kind: "createGoal",
@@ -230,10 +175,6 @@ export const proposeCreateGoal = makeProposeTool({
     longTermGoalId: input.longTermGoalId ?? null,
     description: input.description ?? null,
     targetDate: input.targetDate ?? null,
-    notifications: input.notifications.map((n) => ({
-      schedule: toScheduleStorage(n.schedule),
-      body: n.body,
-    })),
   }),
 });
 
@@ -420,63 +361,5 @@ export const proposeEditEntry = makeProposeTool({
     ...(input.body !== undefined ? { body: input.body } : {}),
     ...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
     ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
-  }),
-});
-
-export const proposeAddGoalNotification = makeProposeTool({
-  description:
-    "Propose adding a notification (reminder or check-in) to an existing goal. A notification is a firing time plus a message that shows up on Kyle's lock screen. If the goal's targetDate is in the future when the notification fires, it behaves as a reminder; if past, it bundles into a check-in chat. Use after Kyle asks to be pinged about something — typical patterns: a daily morning reminder while the goal is open, a one-off check-in for the day after the targetDate.",
-  inputSchema: z.object({
-    goalId: z.string().describe("Convex ID of the goal this notification belongs to."),
-    schedule: scheduleInputSchema,
-    body: z
-      .string()
-      .describe(
-        "Plain-text message for the lock screen. Conversational and specific to this entry — e.g. 'Time to work out' or 'How'd the week of workouts shake out?'",
-      ),
-  }),
-  toProposal: (input) => ({
-    kind: "createNotification",
-    goalId: input.goalId,
-    schedule: toScheduleStorage(input.schedule),
-    body: input.body,
-  }),
-});
-
-export const proposeRemoveGoalNotification = makeProposeTool({
-  description:
-    "Propose removing a specific notification from a goal. The notification ID comes from the goal's notifications list in the system context.",
-  inputSchema: z.object({
-    goalId: z.string().describe("Convex ID of the goal."),
-    notificationId: z
-      .string()
-      .describe("Convex ID of the notification to remove, as shown in the goal's notifications list."),
-  }),
-  toProposal: (input) => ({
-    kind: "removeNotification",
-    goalId: input.goalId,
-    notificationId: input.notificationId,
-  }),
-});
-
-export const proposeUpdateGoalNotification = makeProposeTool({
-  description:
-    "Propose editing a notification's schedule, body, or both. Pass only the fields that change; omit the rest.",
-  inputSchema: z.object({
-    goalId: z.string().describe("Convex ID of the goal."),
-    notificationId: z
-      .string()
-      .describe("Convex ID of the notification to edit, as shown in the goal's notifications list."),
-    schedule: scheduleInputSchema.optional(),
-    body: z.string().optional(),
-  }),
-  toProposal: (input) => ({
-    kind: "updateNotification",
-    goalId: input.goalId,
-    notificationId: input.notificationId,
-    ...(input.schedule !== undefined
-      ? { schedule: toScheduleStorage(input.schedule) }
-      : {}),
-    ...(input.body !== undefined ? { body: input.body } : {}),
   }),
 });

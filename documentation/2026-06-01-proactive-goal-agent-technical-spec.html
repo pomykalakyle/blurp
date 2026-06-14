@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blurp Proactive Goal Agent - Technical Spec</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --panel: #141820;
+      --panel-2: #10141b;
+      --text: #eef2f6;
+      --muted: #a8b3c2;
+      --quiet: #748196;
+      --line: #283140;
+      --accent: #75c7b7;
+      --accent-2: #e2b86b;
+      --code: #d8dee9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 36px 24px 56px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 22px;
+      margin-bottom: 28px;
+    }
+
+    .kicker {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .summary {
+      max-width: 880px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .doc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 230px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    nav {
+      position: sticky;
+      top: 20px;
+      width: 230px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 14px;
+    }
+
+    nav h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--quiet);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    nav a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+
+    nav a.subnav {
+      padding: 3px 0 3px 14px;
+      font-size: 12px;
+      color: var(--quiet);
+    }
+
+    nav a.subnav + a:not(.subnav) {
+      margin-top: 8px;
+    }
+
+    nav a:hover {
+      color: var(--text);
+    }
+
+    main > div {
+      counter-reset: section;
+    }
+
+    section {
+      counter-increment: section;
+      counter-reset: subsection;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    section > h2::before {
+      content: counter(section) ". ";
+      color: var(--accent);
+    }
+
+    .subsection {
+      counter-increment: subsection;
+      border-top: 1px solid var(--line);
+      margin-top: 20px;
+      padding-top: 18px;
+    }
+
+    .subsection:first-of-type {
+      border-top: 0;
+      margin-top: 0;
+      padding-top: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .subsection > h3::before {
+      content: counter(section) "." counter(subsection) " ";
+      color: var(--accent);
+    }
+
+    p {
+      margin: 0 0 13px;
+      color: var(--muted);
+    }
+
+    strong {
+      color: var(--text);
+    }
+
+    code {
+      color: var(--code);
+      background: #0a0f16;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.94em;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .callout {
+      border: 1px solid rgba(117, 199, 183, 0.45);
+      background: rgba(117, 199, 183, 0.08);
+      border-radius: 8px;
+      padding: 15px;
+      color: var(--muted);
+      margin: 14px 0;
+    }
+
+    footer {
+      color: var(--quiet);
+      border-top: 1px solid var(--line);
+      margin-top: 26px;
+      padding-top: 18px;
+      font-size: 13px;
+    }
+
+    a {
+      color: var(--accent);
+      text-underline-offset: 3px;
+    }
+
+    .doc-link {
+      color: var(--accent);
+      font-weight: 650;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        position: static;
+        order: -1;
+        width: fit-content;
+        min-width: 230px;
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 24px 14px 40px;
+      }
+
+      h1 {
+        font-size: 29px;
+      }
+
+      section {
+        padding: 17px;
+      }
+
+      nav {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="kicker">Technical spec</div>
+      <h1>Blurp Proactive Goal Agent</h1>
+      <p class="summary">
+        This document defines the backend and agent architecture for Blurp's proactive goal agent. The functional behavior is defined separately in the <a class="doc-link" href="./2026-05-31-proactive-goal-agent-functional-design.html">product behavior document</a>.
+      </p>
+      <div class="doc-meta">
+        <span class="tag">Date: 2026-06-01</span>
+        <span class="tag">Status: Draft technical specification</span>
+        <span class="tag">Scope: backend and agent architecture</span>
+      </div>
+    </header>
+
+    <main>
+      <div>
+        <section id="summary">
+          <h2>Summary</h2>
+          <p>
+            The system transitions from scheduled reminders to scheduled agent work. The product behavior document defines <a href="./2026-05-31-proactive-goal-agent-functional-design.html#heartbeats">heartbeats</a>, <a href="./2026-05-31-proactive-goal-agent-functional-design.html#tasks">tasks</a>, and <a href="./2026-05-31-proactive-goal-agent-functional-design.html#contact-kyle">proactive messaging</a>; this spec defines how those behaviors are represented in Convex, agent execution, chat creation, push delivery, and learning storage.
+          </p>
+          <p>
+            Convex owns the scheduling and persistence layer. V1 heartbeat timing is planned by a daily Convex cron job, then materialized as <code>agentActivations</code> rows scheduled with Convex one-shot scheduled functions. Tasks use the same one-shot scheduling path. The same table also records historical activation execution so Blurp can reason from scheduled times, execution status, created chat threads, push notifications, follow-up tasks, and silent activations.
+          </p>
+          <p>
+            Scheduling and execution are separate responsibilities: Convex tracks due activations, and the activation executor performs the agent work with the relevant activation, app, and learning context. The executor gives the proactive agent the context and capabilities it needs to carry out the activation according to the <a href="./2026-05-31-proactive-goal-agent-functional-design.html#agent-activation-flow">agent activation flow</a>, such as, but not limited to, approved tools, future task scheduling, learning updates, and proactive messaging.
+          </p>
+          <p>
+            Proactive messaging uses the ordinary chat system. When an activation messages Kyle, it creates a new regular chat thread, writes the opening agent message there, and sends a push notification that opens that thread. It does not route new proactive messaging through the existing Check-in section.
+          </p>
+          <p>
+            Learning is a first-class part of the design. The system needs durable storage and retrieval for what Blurp learns about Kyle, including both the psychological model of Kyle and the model of what kinds of help actually move him toward his goals. The exact storage model is specified in the Agent Learning And Memory section.
+          </p>
+          <p>
+            The old goal-owned notification system is deprecated rather than deleted. Existing tables, historical rows, proposal shapes, and compatibility code remain available, but scheduled goal notifications no longer fire, and notification proposal tools are removed from the active chat agent tool set. Web Push delivery remains in use for proactive agent messaging.
+          </p>
+        </section>
+
+        <section id="scheduling">
+          <h2><a href="./2026-05-31-proactive-goal-agent-functional-design.html#scheduling">Scheduling And Activation Records</a></h2>
+          <div class="callout">
+            Scheduling persists future agent activations with timing, briefs, and execution history. This technical surface covers Convex scheduling and app-level activation records.
+          </div>
+          <div class="subsection" id="concrete-scheduling">
+            <h3><a href="https://docs.convex.dev/scheduling/scheduled-functions">Concrete Scheduling</a></h3>
+            <p>
+              Heartbeat scheduling and task scheduling both use the same concrete scheduling path. That shared path turns an intended future activation into an <code>agentActivations</code> row and a Convex one-shot scheduled function.
+            </p>
+            <p>
+              The shared scheduler receives an activation kind, a concrete <code>scheduledAt</code> timestamp, a source type such as heartbeat planner, ordinary chat, or agent activation, and brief text when present. It creates the app-level activation record, calls Convex <code>ctx.scheduler.runAt</code>, and stores the returned scheduled-function id with the activation.
+            </p>
+            <p>
+              Reconciliation only changes pending future activations. Activations that have already started or completed remain as history.
+            </p>
+          </div>
+          <div class="subsection" id="heartbeat-scheduling">
+            <h3><a href="https://docs.convex.dev/scheduling/cron-jobs">Heartbeat Scheduling</a></h3>
+            <p>
+              Heartbeat scheduling uses one built-in Convex cron job as a daily planner. The cron fires at midnight, reads the current heartbeat schedule configuration, and uses concrete scheduling to create that day's heartbeats.
+            </p>
+            <p>
+              The heartbeat schedule configuration table stores <code>enabled</code>, <code>dailyHeartbeatUtcMinutes</code>, <code>updatedAt</code>, and <code>updatedBy</code>. <code>dailyHeartbeatUtcMinutes</code> is an array of minute-of-day numbers from <code>0</code> to <code>1439</code>, interpreted in UTC.
+            </p>
+            <p>
+              The chat agent and proactive agent have access to a heartbeat-schedule management tool. The tool updates the heartbeat schedule configuration and reconciles any pending heartbeats for the rest of the current day.
+            </p>
+            <p>
+              The tool accepts <code>dailyHeartbeatUtcMinutes</code>, the desired heartbeat cadence as UTC minute-of-day values; <code>effectiveFrom</code>, the first date or timestamp when the new schedule should apply; and <code>enabled</code>, whether heartbeat planning should create heartbeats.
+            </p>
+            <p>
+              When an agent updates the cadence from Kyle-local intent, the tool call uses UTC minute-of-day values. The agent receives Kyle's current timezone context before making the tool call.
+            </p>
+            <p>
+              When called, the tool updates the schedule configuration and reconciles pending heartbeats for the rest of the current day through concrete scheduling.
+            </p>
+          </div>
+          <div class="subsection" id="task-scheduling">
+            <h3><a href="./2026-05-31-proactive-goal-agent-functional-design.html#creating-tasks">Task Scheduling</a></h3>
+            <p>
+              Ordinary chats and agent activations create tasks using a scheduled time and brief.
+            </p>
+            <p>
+              The chat agent and proactive agent have access to a task scheduling tool. The tool creates a future agent activation with a scheduled time and brief through concrete scheduling.
+            </p>
+            <p>
+              The tool accepts <code>at</code>, an ISO datetime with timezone offset for when the future task should start, and <code>brief</code>, the handoff text written by the current agent for the future activation. Any goal-specific information belongs inside the brief text.
+            </p>
+            <p>
+              When called, the tool returns the created activation id and scheduled time.
+            </p>
+          </div>
+          <div class="subsection" id="agent-activation-records">
+            <h3>Agent Activation Records</h3>
+            <p>
+              The <code>agentActivations</code> table stores the minimum state needed to schedule, execute, and reconcile proactive agent activations.
+            </p>
+            <p>
+              Required V1 fields are <code>kind</code>, <code>status</code>, <code>scheduledAt</code>, <code>scheduledFunctionId</code>, <code>brief</code>, and <code>sourceType</code>.
+            </p>
+            <ul>
+              <li><code>kind</code> distinguishes heartbeats from tasks.</li>
+              <li><code>status</code> lets scheduling code identify pending activations and avoid mutating activations that already started or finished.</li>
+              <li><code>scheduledAt</code> stores the concrete UTC timestamp used for scheduling and ordering future activations.</li>
+              <li><code>scheduledFunctionId</code> links a pending activation to the Convex scheduled function that can be canceled or replaced.</li>
+              <li><code>brief</code> stores the text passed to the future agent activation; heartbeats may leave it empty.</li>
+              <li><code>sourceType</code> records whether the activation came from the heartbeat planner, an ordinary chat, or another agent activation.</li>
+            </ul>
+            <p>
+              Richer tracking fields such as source thread, parent activation, created thread, push metadata, response tracking, and error details are deferred until the product needs them.
+            </p>
+          </div>
+        </section>
+
+        <section id="agent-activation-execution">
+          <h2>Agent Activation Execution</h2>
+          <div class="subsection" id="activation-startup">
+            <h3>Activation Startup</h3>
+            <p>
+              This section describes what the executor loads when the <a href="./2026-05-31-proactive-goal-agent-functional-design.html#orient-activation-brief">activation startup</a> begins.
+            </p>
+          </div>
+          <div class="subsection" id="agent-work-session">
+            <h3>Agent Work Session</h3>
+            <p>
+              This section describes the technical execution surface for the agentic work described in <a href="./2026-05-31-proactive-goal-agent-functional-design.html#work-goal-problem">Pursue Goal Progress</a>, including available tools, current app context, future task scheduling, and silent work.
+            </p>
+          </div>
+          <div class="subsection" id="proactive-messaging">
+            <h3>Proactive Messaging</h3>
+            <p>
+              This section describes how the technical system implements <a href="./2026-05-31-proactive-goal-agent-functional-design.html#contact-kyle">proactive messaging</a>: creating a new ordinary chat thread and sending a push notification when messaging Kyle is useful.
+            </p>
+          </div>
+        </section>
+
+        <section id="agent-learning">
+          <h2>Agent Learning And Memory</h2>
+          <div class="subsection" id="recent-activity-review">
+            <h3>Recent Activity Review</h3>
+            <p>
+              This section describes how heartbeats review new or changed chats, goal outcomes, narrative entries, and other recent activity.
+            </p>
+          </div>
+          <div class="subsection" id="durable-learnings">
+            <h3>Durable Learnings</h3>
+            <p>
+              This section describes where Blurp stores its psychological model of Kyle and its model of what works for helping Kyle move toward goals.
+            </p>
+          </div>
+          <div class="subsection" id="retrieval-for-future-activations">
+            <h3>Retrieval For Future Activations</h3>
+            <p>
+              This section describes how future activations retrieve relevant learnings and prior context.
+            </p>
+          </div>
+        </section>
+
+        <section id="deprecated-notifications">
+          <h2>Deprecated Notification System</h2>
+          <div class="subsection" id="retained-compatibility">
+            <h3>Retained Compatibility Surface</h3>
+            <p>
+              This section describes the existing notification tables, proposal shapes, and related code that remain for compatibility with old data and historical proposal cards.
+            </p>
+          </div>
+          <div class="subsection" id="disabled-runtime">
+            <h3>Disabled Runtime Behavior</h3>
+            <p>
+              This section describes the goal-owned notification behavior that stops running: existing scheduled goal notifications no longer fire, and notification proposal tools are removed from the active agent tool set.
+            </p>
+          </div>
+          <div class="subsection" id="reused-push">
+            <h3>Reused Push Plumbing</h3>
+            <p>
+              This section describes how Web Push subscription and delivery plumbing remains available for proactive agent messaging, while new proactive notifications route to ordinary chat threads rather than the existing check-in path.
+            </p>
+          </div>
+        </section>
+
+        <section id="out-of-scope">
+          <h2>Out of Scope</h2>
+          <p>
+            Exact code patterns are not specified here. This document defines the technical behavior, system components, data model, and integration boundaries; the implementing agent chooses the concrete code structure, helper functions, file organization, and local refactors that best fit the existing codebase.
+          </p>
+        </section>
+      </div>
+
+      <nav aria-label="Document sections">
+        <h2>Sections</h2>
+        <a href="#summary">Summary</a>
+        <a href="#scheduling">Scheduling And Activation Records</a>
+        <a class="subnav" href="#concrete-scheduling">2.1 Concrete Scheduling</a>
+        <a class="subnav" href="#heartbeat-scheduling">2.2 Heartbeat Scheduling</a>
+        <a class="subnav" href="#task-scheduling">2.3 Task Scheduling</a>
+        <a class="subnav" href="#agent-activation-records">2.4 Agent Activation Records</a>
+        <a href="#agent-activation-execution">Agent Activation Execution</a>
+        <a class="subnav" href="#activation-startup">3.1 Activation Startup</a>
+        <a class="subnav" href="#agent-work-session">3.2 Agent Work Session</a>
+        <a class="subnav" href="#proactive-messaging">3.3 Proactive Messaging</a>
+        <a href="#agent-learning">Agent Learning And Memory</a>
+        <a class="subnav" href="#recent-activity-review">4.1 Recent Activity Review</a>
+        <a class="subnav" href="#durable-learnings">4.2 Durable Learnings</a>
+        <a class="subnav" href="#retrieval-for-future-activations">4.3 Retrieval For Future Activations</a>
+        <a href="#deprecated-notifications">Deprecated Notification System</a>
+        <a class="subnav" href="#retained-compatibility">5.1 Retained Compatibility Surface</a>
+        <a class="subnav" href="#disabled-runtime">5.2 Disabled Runtime Behavior</a>
+        <a class="subnav" href="#reused-push">5.3 Reused Push Plumbing</a>
+        <a href="#out-of-scope">Out of Scope</a>
+      </nav>
+    </main>
+
+    <footer>
+      Technical specification artifact for Blurp. Functional behavior lives in the proactive goal agent product behavior document.
+    </footer>
+  </div>
+</body>
+</html>

@@ -339,7 +339,6 @@ export const listMessages = query({
 function formatGoalLine(
   g: Doc<"goals">,
   activeLtgs: Doc<"longTermGoals">[],
-  notifications: Doc<"notifications">[] = [],
 ): string {
   const parent = g.longTermGoalId
     ? activeLtgs.find((l) => l._id === g.longTermGoalId)?.title ?? "(unknown LTG)"
@@ -361,12 +360,6 @@ function formatGoalLine(
   let line = `- ${parts.join(" ")}`;
   if (g.description) line += `\n  description: ${g.description}`;
   if (g.notes) line += `\n  notes: ${g.notes.replace(/\n/g, "\n  ")}`;
-  if (notifications.length > 0) {
-    line += `\n  notifications:`;
-    for (const n of notifications) {
-      line += `\n    - [${n._id}] ${formatSchedule(n.schedule)} — "${n.body}"`;
-    }
-  }
   return line;
 }
 
@@ -397,17 +390,6 @@ async function buildDynamicContext(
     internal.chat.lookups.listEntriesInContextWindow,
     {},
   );
-  const allNotifications: Doc<"notifications">[] = await ctx.runQuery(
-    internal.notifications.internalListAll,
-    {},
-  );
-  const notificationsByGoal = new Map<string, Doc<"notifications">[]>();
-  for (const n of allNotifications) {
-    if (n.subject.kind !== "goal") continue;
-    const arr = notificationsByGoal.get(n.subject.goalId) ?? [];
-    arr.push(n);
-    notificationsByGoal.set(n.subject.goalId, arr);
-  }
 
   const today = pacificDate();
 
@@ -425,11 +407,7 @@ async function buildDynamicContext(
   const openGoalLines =
     filteredOpenGoals.length === 0
       ? "(none)"
-      : filteredOpenGoals
-          .map((g) =>
-            formatGoalLine(g, activeLtgs, notificationsByGoal.get(g._id) ?? []),
-          )
-          .join("\n");
+      : filteredOpenGoals.map((g) => formatGoalLine(g, activeLtgs)).join("\n");
 
   const resolvedGoalLines =
     recentlyResolved.length === 0
