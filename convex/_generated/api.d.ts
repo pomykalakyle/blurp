@@ -9,6 +9,7 @@
  */
 
 import type * as agentActivations from "../agentActivations.js";
+import type * as agentRuns from "../agentRuns.js";
 import type * as chat_agent from "../chat/agent.js";
 import type * as chat_constants from "../chat/constants.js";
 import type * as chat_dates from "../chat/dates.js";
@@ -37,6 +38,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agentActivations: typeof agentActivations;
+  agentRuns: typeof agentRuns;
   "chat/agent": typeof chat_agent;
   "chat/constants": typeof chat_constants;
   "chat/dates": typeof chat_dates;
