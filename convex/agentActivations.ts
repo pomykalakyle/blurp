@@ -73,6 +73,7 @@ const agentActivationViewValidator = v.object({
 const activationPushResultValidator = v.object({
   notified: v.boolean(),
   activationId: v.union(v.id("agentActivations"), v.null()),
+  messageId: v.union(v.string(), v.null()),
   sent: v.number(),
   removed: v.number(),
   failed: v.number(),
@@ -88,6 +89,7 @@ const activationPushResultValidator = v.object({
 type ActivationPushResult = {
   notified: boolean;
   activationId: Id<"agentActivations"> | null;
+  messageId: string | null;
   sent: number;
   removed: number;
   failed: number;
@@ -203,8 +205,8 @@ export const getByAgentThreadId = internalQuery({
 export const notifyUser = internalAction({
   args: {
     agentThreadId: v.string(),
-    body: v.string(),
-    title: v.optional(v.string()),
+    promptMessageId: v.optional(v.string()),
+    message: v.string(),
   },
   returns: activationPushResultValidator,
   handler: async (ctx, args): Promise<ActivationPushResult> => {
@@ -216,6 +218,7 @@ export const notifyUser = internalAction({
       return {
         notified: false,
         activationId: null,
+        messageId: null,
         sent: 0,
         removed: 0,
         failed: 0,
@@ -226,12 +229,20 @@ export const notifyUser = internalAction({
       return {
         notified: false,
         activationId: activation._id,
+        messageId: null,
         sent: 0,
         removed: 0,
         failed: 0,
         reason: "activation_not_active",
       };
     }
+
+    const { messageId } = await proactiveAgent.saveMessage(ctx, {
+      threadId: activation.agentThreadId,
+      promptMessageId: args.promptMessageId,
+      message: { role: "assistant", content: args.message },
+      skipEmbeddings: true,
+    });
 
     const subs: Doc<"pushSubscriptions">[] = await ctx.runQuery(
       internal.push.listAll,
@@ -241,6 +252,7 @@ export const notifyUser = internalAction({
       return {
         notified: false,
         activationId: activation._id,
+        messageId,
         sent: 0,
         removed: 0,
         failed: 0,
@@ -249,8 +261,8 @@ export const notifyUser = internalAction({
     }
 
     const payload = JSON.stringify({
-      title: args.title ?? "blurp",
-      body: args.body,
+      title: "blurp",
+      body: args.message,
       url: `/?activation=${activation._id}`,
     });
     const result: { sent: number; removed: number; failed: number } =
@@ -266,6 +278,7 @@ export const notifyUser = internalAction({
     return {
       notified: result.sent > 0,
       activationId: activation._id,
+      messageId,
       sent: result.sent,
       removed: result.removed,
       failed: result.failed,

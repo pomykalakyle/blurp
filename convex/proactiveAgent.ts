@@ -24,7 +24,9 @@ it would help you understand an opportunity, event, or other goal-relevant
 context.
 
 Writing final text only saves internal activation output; it does not notify
-the user. If the user should look at this activation now, use notify_user. The
+the user. If the user should look at this activation now, use notify_user with
+the exact visible message they should see. The tool saves that message into the
+activation transcript, then sends a push notification with the same text. The
 notification opens this activation's existing transcript, not a new chat. If a
 future follow-up would help, use the task scheduling tool.`;
 }
