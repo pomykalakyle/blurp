@@ -9,7 +9,7 @@ type ScheduledTaskResult = {
   activationId: string;
   scheduledAt: number;
 };
-type MessageKyleResult = {
+type NotifyUserResult = {
   notified: boolean;
   activationId: string | null;
   sent: number;
@@ -45,7 +45,7 @@ const goalTypeSchema = z.enum(["achievement", "avoidance"]);
 
 export const lookupArchivedLtgs = createTool({
   description:
-    "List Kyle's archived (no longer active) long-term goals. Use when the conversation references something older that may not be in the current set.",
+    "List the user's archived (no longer active) long-term goals. Use when the conversation references something older that may not be in the current set.",
   inputSchema: z.object({}),
   execute: async (ctx): Promise<LtgLookupResult[]> => {
     const docs: Doc<"longTermGoals">[] = await ctx.runQuery(
@@ -64,7 +64,7 @@ export const lookupArchivedLtgs = createTool({
 
 export const lookupResolvedGoals = createTool({
   description:
-    "List Kyle's reviewed (closed-out) goals — both successes and failures. Use when the conversation looks back on past goals or asks how something turned out. Outcome derivation: achievement+outcomeDate set = succeeded; achievement+outcomeDate null = failed; avoidance+outcomeDate set = slipped (failed); avoidance+outcomeDate null = successfully avoided.",
+    "List the user's reviewed (closed-out) goals — both successes and failures. Use when the conversation looks back on past goals or asks how something turned out. Outcome derivation: achievement+outcomeDate set = succeeded; achievement+outcomeDate null = failed; avoidance+outcomeDate set = slipped (failed); avoidance+outcomeDate null = successfully avoided.",
   inputSchema: z.object({}),
   execute: async (ctx): Promise<GoalLookupResult[]> => {
     const docs: Doc<"goals">[] = await ctx.runQuery(internal.goals.listResolved, {});
@@ -126,7 +126,7 @@ function makeProposeTool<I>(opts: {
 function makeScheduleTaskTool(sourceType: "ordinary_chat" | "agent_activation") {
   return createTool({
     description:
-      "Schedule a future agent task. Use when a later moment has useful context for helping Kyle move toward his goals. This acts immediately and does not create a proposal card.",
+      "Schedule a future agent task. Use when a later moment has useful context for helping the user move toward their goals. This acts immediately and does not create a proposal card.",
     inputSchema: z.object({
       at: z
         .string()
@@ -160,25 +160,25 @@ function makeScheduleTaskTool(sourceType: "ordinary_chat" | "agent_activation") 
 export const scheduleTaskFromChat = makeScheduleTaskTool("ordinary_chat");
 export const scheduleTaskFromAgent = makeScheduleTaskTool("agent_activation");
 
-export const messageKyleFromActivation = createTool({
+export const notifyUserFromActivation = createTool({
   description:
-    "Get Kyle's attention about the current activation. This sends a push notification; tapping it opens this activation's existing transcript. Use only when Kyle should look at the activation now. It does not create a new chat thread.",
+    "Get the user's attention about the current activation. This sends a push notification; tapping it opens this activation's existing transcript. Use only when the user should look at the activation now. It does not create a new chat thread.",
   inputSchema: z.object({
     body: z
       .string()
       .describe(
-        "Short notification text telling Kyle why he should open this activation.",
+        "Short notification text telling the user why they should open this activation.",
       ),
     title: z
       .string()
       .optional()
       .describe("Optional notification title. Usually omit this."),
   }),
-  execute: async (ctx, input): Promise<MessageKyleResult> => {
+  execute: async (ctx, input): Promise<NotifyUserResult> => {
     if (!ctx.threadId) {
-      throw new Error("message_kyle called outside an activation thread");
+      throw new Error("notify_user called outside an activation thread");
     }
-    return await ctx.runAction(internal.agentActivations.messageKyle, {
+    return await ctx.runAction(internal.agentActivations.notifyUser, {
       agentThreadId: ctx.threadId,
       body: input.body,
       title: input.title,
@@ -188,7 +188,7 @@ export const messageKyleFromActivation = createTool({
 
 export const proposeCreateGoal = makeProposeTool({
   description:
-    "Propose adding a new goal to Kyle's list. Use when you want Kyle to consider tracking a new goal.",
+    "Propose adding a new goal to the user's list. Use when you want the user to consider tracking a new goal.",
   inputSchema: z.object({
     title: z.string().describe("Short, action-oriented goal title."),
     type: goalTypeSchema.describe(
@@ -293,7 +293,7 @@ export const proposeEditLtg = makeProposeTool({
 
 export const proposeArchiveLtg = makeProposeTool({
   description:
-    "Propose archiving a long-term goal Kyle has outgrown.",
+    "Propose archiving a long-term goal the user has outgrown.",
   inputSchema: z.object({
     ltgId: z.string(),
   }),
@@ -302,7 +302,7 @@ export const proposeArchiveLtg = makeProposeTool({
 
 export const proposeDeleteGoal = makeProposeTool({
   description:
-    "Propose permanently deleting a goal from Kyle's database. Use only when Kyle explicitly wants the goal gone (e.g. 'delete it', 'remove it', 'clear it out'). For finishing a goal that ran its course, prefer propose_resolve_goal.",
+    "Propose permanently deleting a goal from the user's database. Use only when the user explicitly wants the goal gone (e.g. 'delete it', 'remove it', 'clear it out'). For finishing a goal that ran its course, prefer propose_resolve_goal.",
   inputSchema: z.object({
     goalId: z.string().describe("Convex ID of the goal to delete."),
   }),
@@ -311,7 +311,7 @@ export const proposeDeleteGoal = makeProposeTool({
 
 export const proposeDeleteLtg = makeProposeTool({
   description:
-    "Propose permanently deleting a long-term goal from Kyle's database. Any child goals will have their parent reference cleared but will not themselves be deleted. Use only when Kyle explicitly wants the LTG gone; for outgrowing or wrapping one up, prefer propose_archive_ltg.",
+    "Propose permanently deleting a long-term goal from the user's database. Any child goals will have their parent reference cleared but will not themselves be deleted. Use only when the user explicitly wants the LTG gone; for outgrowing or wrapping one up, prefer propose_archive_ltg.",
   inputSchema: z.object({
     ltgId: z.string().describe("Convex ID of the long-term goal to delete."),
   }),
@@ -353,10 +353,10 @@ export const proposeResolveGoal = makeProposeTool({
 
 export const proposeCreateEntry = makeProposeTool({
   description:
-    "Propose adding a new narrative entry — an event, decision, thought, or thing Kyle is working through. Use granular entries (one event per entry) rather than mashing things together. Set endDate equal to startDate for a single-day event, a later ISO date for a span, or null if the event is ongoing.",
+    "Propose adding a new narrative entry — an event, decision, thought, or thing the user is working through. Use granular entries (one event per entry) rather than mashing things together. Set endDate equal to startDate for a single-day event, a later ISO date for a span, or null if the event is ongoing.",
   inputSchema: z.object({
     title: z.string().describe("Short, specific title for the event."),
-    body: z.string().describe("Body text describing what happened or what Kyle is thinking."),
+    body: z.string().describe("Body text describing what happened or what the user is thinking."),
     startDate: z.string().describe("ISO date (YYYY-MM-DD) when the event began."),
     endDate: z
       .string()

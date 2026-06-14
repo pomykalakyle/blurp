@@ -7,16 +7,16 @@ Status: Active spec for the build. Pair to the [technical spec](2026-05-22-goal-
 
 ## 1. Summary
 
-Push notifications on Kyle's iPhone that fire at moments associated with a
+Push notifications on the user's phone that fire at moments associated with a
 goal — both before its end date (reminders to do the thing) and after
 (check-ins to mark how it went). The assistant decides what notifications
-each goal should have; Kyle never configures them directly. Tapping a
+each goal should have; the user never configures them directly. Tapping a
 notification opens the app at the right place: the relevant goal for a
 reminder, a check-in chat for a post-end-date ping.
 
 This replaces the [2026-05-17 spec](2026-05-17-goal-notifications-spec.md).
 The earlier draft framed notifications narrowly as post-`endDate` check-ins
-on two fixed Pacific slots, with the system tracking how many pings each
+on two fixed user-local time slots, with the system tracking how many pings each
 goal had accrued. This version generalizes: notifications also fire before
 `endDate` (reminders), the assistant fully owns timing and copy, and the
 reminder-vs-check-in branch is decided at fire time from the goal's
@@ -27,7 +27,7 @@ current `endDate`.
 ## 2. Notification entries
 
 A goal carries a list of **notification entries**. Each entry is a firing
-time plus a message — the text that shows up on Kyle's lock screen.
+time plus a message — the text that shows up on the user's lock screen.
 
 Whether an entry behaves as a reminder or a check-in is computed at fire
 time from the goal's current `endDate`:
@@ -51,8 +51,8 @@ time.
 A notification entry can be either:
 
 - **One-off** — a single absolute timestamp (e.g., "2026-05-25 09:00
-  Pacific"). Fires once, then goes away.
-- **Recurring** — `daily at HH:MM Pacific until endDate`. Re-fires each day
+  user-local time"). Fires once, then goes away.
+- **Recurring** — `daily at HH:MM user-local time until endDate`. Re-fires each day
   at the configured time until the goal's `endDate` passes, at which point
   the recurrence stops producing fires.
 
@@ -62,7 +62,7 @@ might have a recurring "every morning at 8am" reminder plus two one-off
 check-ins (the day after `endDate` at 10am and again three days later).
 
 Per-minute precision throughout (the assistant can schedule 7:42am if it
-wants). All times are interpreted in Pacific.
+wants). All times are interpreted in user-local time.
 
 ---
 
@@ -94,7 +94,7 @@ What the assistant is expected to do:
   longer make sense.
 
 For goals that already exist, the assistant has separate add / remove /
-edit notification tools — each surfaces its own proposal Kyle reviews
+edit notification tools — each surfaces its own proposal the user reviews
 before it lands. Editing the goal itself (title, dates) and editing its
 notifications are kept as separate proposals so each one is about a
 single intent.
@@ -161,14 +161,14 @@ goal for v1.
 
 ## 8. Out of scope for v1
 
-- **Non-response tracking.** Recording when Kyle dismisses or ignores a
+- **Non-response tracking.** Recording when the user dismisses or ignores a
   notification, and surfacing that signal anywhere. Deferred; revisited
   after the system is running.
 - **User-facing notification configuration UI.** Everything goes through
   the assistant.
 - **Notifications for non-goal entities.** No journaling reminders, no
   LTG nudges, no weekly-review prompts.
-- **Desktop browser notifications.** iPhone is the only target.
+- **Desktop browser notifications.** phone is the only target.
 - **Multiple devices per user.** One subscription, one phone.
 - **Notification history view in the app.**
 - **Per-goal notification configuration via the goal-card UI.** Even

@@ -19,6 +19,7 @@ function summarize(
     type: "achievement" | "avoidance";
   }>,
   entries: Array<{ _id: string; title: string }>,
+  timeZone?: string,
 ): { kindLabel: string; body: string } {
   switch (proposal.kind) {
     case "createGoal": {
@@ -33,7 +34,8 @@ function summarize(
         .filter(Boolean)
         .join(" · ");
       const notifLines = (proposal.notifications ?? []).map(
-        (n) => `• ${formatNotificationSchedule(n.schedule)} — "${n.body}"`,
+        (n) =>
+          `• ${formatNotificationSchedule(n.schedule, timeZone)} — "${n.body}"`,
       );
       const notifBlock =
         notifLines.length > 0
@@ -181,7 +183,7 @@ function summarize(
       const goal = goals.find((g) => g._id === proposal.goalId);
       return {
         kindLabel: "Add notification",
-        body: `"${goal?.title ?? "(unknown goal)"}"\n${formatNotificationSchedule(proposal.schedule)}\n"${proposal.body}"`,
+        body: `"${goal?.title ?? "(unknown goal)"}"\n${formatNotificationSchedule(proposal.schedule, timeZone)}\n"${proposal.body}"`,
       };
     }
     case "removeNotification": {
@@ -195,7 +197,9 @@ function summarize(
       const goal = goals.find((g) => g._id === proposal.goalId);
       const changes: string[] = [];
       if (proposal.schedule !== undefined)
-        changes.push(`schedule → ${formatNotificationSchedule(proposal.schedule)}`);
+        changes.push(
+          `schedule → ${formatNotificationSchedule(proposal.schedule, timeZone)}`,
+        );
       if (proposal.body !== undefined)
         changes.push(`body → "${proposal.body}"`);
       return {
@@ -221,6 +225,7 @@ export function ProposalCard({ card }: Props) {
   const ltgs = useQuery(api.longTermGoals.list) ?? [];
   const goals = useQuery(api.goals.list) ?? [];
   const entries = useQuery(api.narrativeEntries.list) ?? [];
+  const settings = useQuery(api.userSettings.get);
   const accept = useMutation(api.chat.proposals.accept);
   const dismiss = useMutation(api.chat.proposals.dismiss);
 
@@ -237,8 +242,9 @@ export function ProposalCard({ card }: Props) {
           type: "achievement" | "avoidance";
         }>,
         entries as Array<{ _id: string; title: string }>,
+        settings?.timeZone ?? undefined,
       ),
-    [card.proposal, ltgs, goals, entries],
+    [card.proposal, ltgs, goals, entries, settings?.timeZone],
   );
 
   if (card.status === "accepted") {

@@ -292,7 +292,7 @@
         <section id="summary">
           <h2>Summary</h2>
           <p>
-            The system transitions from scheduled reminders to scheduled agent work. The product behavior document defines <a href="./2026-05-31-proactive-goal-agent-functional-design.html#heartbeats">heartbeats</a>, <a href="./2026-05-31-proactive-goal-agent-functional-design.html#tasks">tasks</a>, and <a href="./2026-05-31-proactive-goal-agent-functional-design.html#contact-kyle">proactive messaging</a>; this spec defines how those behaviors are represented in Convex, agent execution, chat creation, push delivery, and learning storage.
+            The system transitions from scheduled reminders to scheduled agent work. The product behavior document defines <a href="./2026-05-31-proactive-goal-agent-functional-design.html#heartbeats">heartbeats</a>, <a href="./2026-05-31-proactive-goal-agent-functional-design.html#tasks">tasks</a>, and <a href="./2026-05-31-proactive-goal-agent-functional-design.html#contact-user">proactive messaging</a>; this spec defines how those behaviors are represented in Convex, agent execution, chat creation, push delivery, and learning storage.
           </p>
           <p>
             Convex owns the scheduling and persistence layer. V1 heartbeat timing is planned by a daily Convex cron job, then materialized as <code>agentActivations</code> rows scheduled with Convex one-shot scheduled functions. Tasks use the same one-shot scheduling path. The same table also records historical activation execution so Blurp can reason from scheduled times, execution status, created chat threads, push notifications, follow-up tasks, and silent activations.
@@ -301,10 +301,10 @@
             Scheduling and execution are separate responsibilities: Convex tracks due activations, and the activation executor performs the agent work with the relevant activation, app, and learning context. The executor gives the proactive agent the context and capabilities it needs to carry out the activation according to the <a href="./2026-05-31-proactive-goal-agent-functional-design.html#agent-activation-flow">agent activation flow</a>, such as, but not limited to, approved tools, future task scheduling, learning updates, and proactive messaging.
           </p>
           <p>
-            Proactive messaging uses the ordinary chat system. When an activation messages Kyle, it creates a new regular chat thread, writes the opening agent message there, and sends a push notification that opens that thread. It does not route new proactive messaging through the existing Check-in section.
+            Proactive messaging uses the ordinary chat system. When an activation messages the user, it creates a new regular chat thread, writes the opening agent message there, and sends a push notification that opens that thread. It does not route new proactive messaging through the existing Check-in section.
           </p>
           <p>
-            Learning is a first-class part of the design. The system needs durable storage and retrieval for what Blurp learns about Kyle, including both the psychological model of Kyle and the model of what kinds of help actually move him toward his goals. The exact storage model is specified in the Agent Learning And Memory section.
+            Learning is a first-class part of the design. The system needs durable storage and retrieval for what Blurp learns about the user, including both the psychological model of the user and the model of what kinds of help actually move him toward his goals. The exact storage model is specified in the Agent Learning And Memory section.
           </p>
           <p>
             The old goal-owned notification system is deprecated rather than deleted. Existing tables, historical rows, proposal shapes, and compatibility code remain available, but scheduled goal notifications no longer fire, and notification proposal tools are removed from the active chat agent tool set. Web Push delivery remains in use for proactive agent messaging.
@@ -343,7 +343,7 @@
               The tool accepts <code>dailyHeartbeatUtcMinutes</code>, the desired heartbeat cadence as UTC minute-of-day values; <code>effectiveFrom</code>, the first date or timestamp when the new schedule should apply; and <code>enabled</code>, whether heartbeat planning should create heartbeats.
             </p>
             <p>
-              When an agent updates the cadence from Kyle-local intent, the tool call uses UTC minute-of-day values. The agent receives Kyle's current timezone context before making the tool call.
+              When an agent updates the cadence from user-local intent, the tool call uses UTC minute-of-day values. The agent receives the user's current timezone context before making the tool call.
             </p>
             <p>
               When called, the tool updates the schedule configuration and reconciles pending heartbeats for the rest of the current day through concrete scheduling.
@@ -403,7 +403,7 @@
           <div class="subsection" id="proactive-messaging">
             <h3>Proactive Messaging</h3>
             <p>
-              This section describes how the technical system implements <a href="./2026-05-31-proactive-goal-agent-functional-design.html#contact-kyle">proactive messaging</a>: creating a new ordinary chat thread and sending a push notification when messaging Kyle is useful.
+              This section describes how the technical system implements <a href="./2026-05-31-proactive-goal-agent-functional-design.html#contact-user">proactive messaging</a>: creating a new ordinary chat thread and sending a push notification when messaging the user is useful.
             </p>
           </div>
         </section>
@@ -419,7 +419,7 @@
           <div class="subsection" id="durable-learnings">
             <h3>Durable Learnings</h3>
             <p>
-              This section describes where Blurp stores its psychological model of Kyle and its model of what works for helping Kyle move toward goals.
+              This section describes where Blurp stores its psychological model of the user and its model of what works for helping the user move toward goals.
             </p>
           </div>
           <div class="subsection" id="retrieval-for-future-activations">

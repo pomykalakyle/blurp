@@ -23,6 +23,14 @@ export default defineSchema({
     count: v.number(),
   }),
 
+  userSettings: defineTable({
+    key: v.literal("default"),
+    displayName: v.string(),
+    aboutUser: v.string(),
+    timeZone: v.string(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   longTermGoals: defineTable({
     title: v.string(),
     description: v.string(),
@@ -137,7 +145,7 @@ export default defineSchema({
         kind: v.literal("oneoff"),
         at: v.number(),
       }),
-      // Recurring: fires daily at `time` (HH:MM, 24-hour Pacific) until
+      // Recurring: fires daily at `time` (HH:MM, 24-hour user-local) until
       // the parent's endDate passes.
       v.object({
         kind: v.literal("daily"),

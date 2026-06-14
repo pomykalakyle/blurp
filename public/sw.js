@@ -4,7 +4,7 @@
 // Push notification service worker for the blurp PWA. Two responsibilities:
 //   1. On "push" — iOS just woke us up with an encrypted payload. Show the
 //      notification on the lock screen.
-//   2. On "notificationclick" — Kyle tapped. Open the PWA at the URL
+//   2. On "notificationclick" — the user tapped. Open the PWA at the URL
 //      embedded in the payload.
 
 self.addEventListener("install", () => {

@@ -155,7 +155,7 @@ export function ThemeStyles() {
   );
 }
 
-export function Button({ children, onClick, variant = 'primary', size = 'md', disabled, className = '', type = 'button', ...rest }) {
+export function Button({ children, onClick = undefined, variant = 'primary', size = 'md', disabled = false, className = '', type = 'button', ...rest }) {
   const sizeCls = size === 'sm' ? 'px-3 py-1.5 text-sm' : size === 'lg' ? 'px-5 py-3 text-base' : 'px-4 py-2 text-sm';
   const variantCls = `btn btn-${variant}`;
   return (

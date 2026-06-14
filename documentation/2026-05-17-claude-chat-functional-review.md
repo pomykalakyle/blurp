@@ -7,7 +7,7 @@ Status: Draft for review
 
 ## 1. Summary
 
-A conversational surface for Claude inside Blurp. Kyle opens a Chat section, starts or returns to a thread, and talks freely with Claude about his goals, his long-term goals, and how he's thinking about his life. Claude can see Kyle's current goals and long-term goals on every turn and can look up older information when relevant. When Claude wants to make a change — add a goal, archive a long-term goal, mark something done — it doesn't act directly; it surfaces a proposal card that Kyle taps to accept or ignore. The chat works equally well on iPhone and desktop, syncs across both, and is structured so Claude can eventually be granted more autonomy without rebuilding it.
+A conversational surface for Claude inside Blurp. the user opens a Chat section, starts or returns to a thread, and talks freely with Claude about his goals, his long-term goals, and how he's thinking about his life. Claude can see the user's current goals and long-term goals on every turn and can look up older information when relevant. When Claude wants to make a change — add a goal, archive a long-term goal, mark something done — it doesn't act directly; it surfaces a proposal card that the user taps to accept or ignore. The chat works equally well on phone and desktop, syncs across both, and is structured so Claude can eventually be granted more autonomy without rebuilding it.
 
 ---
 
@@ -24,13 +24,13 @@ Tap targets are at least 44px on mobile. The chat input sits above the iOS keybo
 
 ## 3. Chat list
 
-Every thread Kyle has ever had appears in the list, sorted by most-recent activity, descending. Each row shows the title, a short preview snippet from the most recent message, and a relative time ("2h", "Yesterday", "May 11"). Kyle can open a chat or rename it; deletion is not in v1.
+Every thread the user has ever had appears in the list, sorted by most-recent activity, descending. Each row shows the title, a short preview snippet from the most recent message, and a relative time ("2h", "Yesterday", "May 11"). the user can open a chat or rename it; deletion is not in v1.
 
-Titles are generated automatically after the first user→assistant exchange, summarized into 3–6 words and saved to the thread. Until that completes, the row reads "Untitled." Kyle can rename a chat at any time, and once he renames it manually, auto-titling never overwrites that title.
+Titles are generated automatically after the first user→assistant exchange, summarized into 3–6 words and saved to the thread. Until that completes, the row reads "Untitled." the user can rename a chat at any time, and once he renames it manually, auto-titling never overwrites that title.
 
-A "+ New chat" affordance is always visible. The first time Kyle opens Chat with no existing threads, the app drops him straight into a new empty conversation rather than showing an empty-state screen — the first message he sends creates the thread.
+A "+ New chat" affordance is always visible. The first time the user opens Chat with no existing threads, the app drops him straight into a new empty conversation rather than showing an empty-state screen — the first message he sends creates the thread.
 
-Threads, messages, titles, and renames sync across devices in near-real-time. A conversation started on desktop continues seamlessly on iPhone.
+Threads, messages, titles, and renames sync across devices in near-real-time. A conversation started on desktop continues seamlessly on phone.
 
 ---
 
@@ -42,15 +42,15 @@ The active conversation fills the right pane on desktop and the screen on mobile
 
 Top to bottom, the conversation contains a header with the chat title and a rename affordance; a scrollable message list with user messages right-aligned and Claude messages left-aligned; and an input row pinned to the bottom with a multiline textarea and a send button. While a response is streaming, the send button becomes a stop-generating button that cancels in place.
 
-Claude's responses stream in as they're generated. Markdown is rendered in Claude's messages — paragraphs, lists, code blocks, bold/italic, inline links. Long messages wrap and remain readable on iPhone.
+Claude's responses stream in as they're generated. Markdown is rendered in Claude's messages — paragraphs, lists, code blocks, bold/italic, inline links. Long messages wrap and remain readable on phone.
 
-If Kyle navigates away to another section (or another chat) while a response is still streaming, the response keeps generating in the background. When he returns to the conversation, the completed message is there. The navigation itself shows no in-progress indicator.
+If the user navigates away to another section (or another chat) while a response is still streaming, the response keeps generating in the background. When he returns to the conversation, the completed message is there. The navigation itself shows no in-progress indicator.
 
 ### 4.2 Proposal cards — Claude's write surface
 
-Claude cannot mutate Kyle's data directly. When Claude wants to make a change, it surfaces a structured proposal card inline beneath its message. Kyle is the one who applies it.
+Claude cannot mutate the user's data directly. When Claude wants to make a change, it surfaces a structured proposal card inline beneath its message. the user is the one who applies it.
 
-**Lifetime.** A card is live only until Kyle's next message in the same thread. Sending another message implicitly dismisses any unaccepted cards from prior turns — they collapse out of view and are not recoverable. Accepting or explicitly dismissing a card before the next message removes it immediately. Accepted cards leave behind a small in-message marker ("Added goal: Workout 3x") so the conversation record honestly reflects what was applied.
+**Lifetime.** A card is live only until the user's next message in the same thread. Sending another message implicitly dismisses any unaccepted cards from prior turns — they collapse out of view and are not recoverable. Accepting or explicitly dismissing a card before the next message removes it immediately. Accepted cards leave behind a small in-message marker ("Added goal: Workout 3x") so the conversation record honestly reflects what was applied.
 
 **What Claude can propose.**
 
@@ -62,17 +62,17 @@ Claude cannot mutate Kyle's data directly. When Claude wants to make a change, i
 
 Every card has Accept and Dismiss buttons. Accept applies the change immediately and stamps the in-message marker.
 
-**Stale proposals.** If the underlying goal or long-term goal that a card targets has changed (renamed, archived, deleted) since Claude proposed the action, the card visually marks itself stale and Accept is disabled. Kyle would have to ask Claude again with the current state in mind.
+**Stale proposals.** If the underlying goal or long-term goal that a card targets has changed (renamed, archived, deleted) since Claude proposed the action, the card visually marks itself stale and Accept is disabled. the user would have to ask Claude again with the current state in mind.
 
-**Constraints.** In v1, Claude cannot delete goals or long-term goals, reorder them, change drag positions, modify anything outside the goals / long-term goals domain (chat metadata, app preferences, etc.), or act without Kyle's tap. There is no agent mode.
+**Constraints.** In v1, Claude cannot delete goals or long-term goals, reorder them, change drag positions, modify anything outside the goals / long-term goals domain (chat metadata, app preferences, etc.), or act without the user's tap. There is no agent mode.
 
 ### 4.3 What Claude knows — Claude's read surface
 
-**On every turn (implicit).** Each turn, the context Claude receives includes today's date, a short personal-context paragraph about Kyle, all active long-term goals (title, description), and all current weekly goals (title, type, state, long-term parent if any, end date, notes). This is refreshed every turn so Claude never reasons from stale state.
+**On every turn (implicit).** Each turn, the context Claude receives includes today's date, a short personal-context paragraph about the user, all active long-term goals (title, description), and all current weekly goals (title, type, state, long-term parent if any, end date, notes). This is refreshed every turn so Claude never reasons from stale state.
 
-**By looking it up (tools).** When a conversation calls for it, Claude can fetch archived long-term goals, past or ended weekly goals, and — forward-compatible — past weeks and weekly narratives once those parts of the app exist. These lookups happen mid-turn and inform the same response; looked-up content is not stored back into the chat record. Each tool call surfaces as a small inline indicator in the assistant's message ("Looking up archived goals…") so Kyle can see what Claude is doing without the raw inputs and outputs cluttering the conversation.
+**By looking it up (tools).** When a conversation calls for it, Claude can fetch archived long-term goals, past or ended weekly goals, and — forward-compatible — past weeks and weekly narratives once those parts of the app exist. These lookups happen mid-turn and inform the same response; looked-up content is not stored back into the chat record. Each tool call surfaces as a small inline indicator in the assistant's message ("Looking up archived goals…") so the user can see what Claude is doing without the raw inputs and outputs cluttering the conversation.
 
-**Persona and personal context.** For v1, Claude's instructions and Kyle's personal-context paragraph live in code, not in the app's UI. Kyle tunes them over time. There is no in-app settings screen for editing these.
+**Persona and personal context.** For v1, Claude's instructions and the user's personal-context paragraph live in code, not in the app's UI. the user tunes them over time. There is no in-app settings screen for editing these.
 
 **What Claude does not see.** Other chat threads — each conversation is independent and Claude has no cross-thread memory. Anything outside the app — no calendar, email, Slack, files.
 

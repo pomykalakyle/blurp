@@ -13,8 +13,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-
-const PACIFIC_TZ = "America/Los_Angeles";
+import { loadUserSettings } from "./userSettings";
 
 // Tolerance window for "is this notification due now": the scheduler
 // fires within a few ms of firesAt, but we treat anything within
@@ -24,10 +23,11 @@ const TICK_TOLERANCE_MS = 60_000;
 
 // ---------- pure helpers (timezone math) ----------
 
-// Construct a ms timestamp that, when formatted in Pacific, reads as
-// year-month-day at HH:MM. Handles DST by iterating: guess, format,
-// adjust by the difference. Converges in 2-3 iterations.
-function pacificMs(
+// Construct a ms timestamp that, when formatted in the user's configured
+// timezone, reads as year-month-day at HH:MM. Handles DST by iterating:
+// guess, format, adjust by the difference. Converges in 2-3 iterations.
+function zonedMs(
+  timeZone: string,
   year: number,
   month: number,
   day: number,
@@ -37,7 +37,7 @@ function pacificMs(
   let guess = Date.UTC(year, month - 1, day, hh, mm);
   for (let i = 0; i < 4; i++) {
     const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: PACIFIC_TZ,
+      timeZone,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -60,36 +60,40 @@ function pacificMs(
   return guess;
 }
 
-// Format `ms` as YYYY-MM-DD in Pacific.
-function pacificDateOf(ms: number): { y: number; m: number; d: number } {
+// Format `ms` as YYYY-MM-DD in the user's configured timezone.
+function localDateOf(
+  timeZone: string,
+  ms: number,
+): { y: number; m: number; d: number } {
   const s = new Intl.DateTimeFormat("en-CA", {
-    timeZone: PACIFIC_TZ,
+    timeZone,
   }).format(new Date(ms));
   const [y, m, d] = s.split("-").map(Number);
   return { y, m, d };
 }
 
-// Compute the next fire time for a daily HH:MM Pacific entry, given
-// the parent goal's targetDate cutoff (end-of-day Pacific on that date).
+// Compute the next fire time for a daily HH:MM user-local entry, given
+// the parent goal's targetDate cutoff (end-of-day in that timezone).
 // Returns null if all candidates fall after the cutoff.
 function nextDailyOccurrenceMs(
+  timeZone: string,
   hhmm: string,
   targetDateIso: string | null,
   nowMs: number,
 ): number | null {
   const [hh, mm] = hhmm.split(":").map(Number);
-  const today = pacificDateOf(nowMs);
-  // Iterate day-by-day starting today, looking for the next Pacific
+  const today = localDateOf(timeZone, nowMs);
+  // Iterate day-by-day starting today, looking for the next user-local
   // HH:MM > now. 366 caps to one year — daily entries shouldn't have
   // futures past that.
   for (let offset = 0; offset < 366; offset++) {
     const base = Date.UTC(today.y, today.m - 1, today.d) + offset * 86_400_000;
-    const baseDate = pacificDateOf(base);
-    const candidate = pacificMs(baseDate.y, baseDate.m, baseDate.d, hh, mm);
+    const baseDate = localDateOf(timeZone, base);
+    const candidate = zonedMs(timeZone, baseDate.y, baseDate.m, baseDate.d, hh, mm);
     if (candidate <= nowMs) continue;
     if (targetDateIso !== null) {
       const [ty, tm, td] = targetDateIso.split("-").map(Number);
-      const cutoff = pacificMs(ty, tm, td, 23, 59);
+      const cutoff = zonedMs(timeZone, ty, tm, td, 23, 59);
       if (candidate > cutoff) return null;
     }
     return candidate;
@@ -97,16 +101,17 @@ function nextDailyOccurrenceMs(
   return null;
 }
 
-// End-of-day Pacific cutoff for an ISO date string (YYYY-MM-DD).
-function endOfDayPacific(isoDate: string): number {
+// End-of-day user-local cutoff for an ISO date string (YYYY-MM-DD).
+function endOfDayLocal(timeZone: string, isoDate: string): number {
   const [y, m, d] = isoDate.split("-").map(Number);
-  return pacificMs(y, m, d, 23, 59);
+  return zonedMs(timeZone, y, m, d, 23, 59);
 }
 
 // Compute the next fire ms for a single notification, given its parent
 // goal and the current time. Returns null if this entry shouldn't fire
 // (goal is closed, daily exhausted, etc.).
 function nextFireForEntry(
+  timeZone: string,
   n: Doc<"notifications">,
   goal: Doc<"goals">,
   nowMs: number,
@@ -121,12 +126,18 @@ function nextFireForEntry(
     return Math.max(n.schedule.at, nowMs);
   }
   // daily
-  return nextDailyOccurrenceMs(n.schedule.time, goal.targetDate ?? null, nowMs);
+  return nextDailyOccurrenceMs(
+    timeZone,
+    n.schedule.time,
+    goal.targetDate ?? null,
+    nowMs,
+  );
 }
 
 // Pick the earliest next fire across every active notification. Returns
 // null if nothing is pending.
 function computeNextFireMs(
+  timeZone: string,
   notifications: Doc<"notifications">[],
   goalsById: Map<string, Doc<"goals">>,
   nowMs: number,
@@ -136,7 +147,7 @@ function computeNextFireMs(
     if (n.subject.kind !== "goal") continue;
     const goal = goalsById.get(n.subject.goalId);
     if (!goal) continue;
-    const t = nextFireForEntry(n, goal, nowMs);
+    const t = nextFireForEntry(timeZone, n, goal, nowMs);
     if (t === null) continue;
     if (next === null || t < next) next = t;
   }
@@ -179,7 +190,13 @@ export const replan = internalMutation({
     );
 
     const nowMs = Date.now();
-    const next = computeNextFireMs(notifs, goalsById, nowMs);
+    const settings = await loadUserSettings(ctx);
+    const next = computeNextFireMs(
+      settings.timeZone,
+      notifs,
+      goalsById,
+      nowMs,
+    );
 
     const current = await ctx.db.query("scheduledNotification").first();
 
@@ -240,6 +257,7 @@ export const tick = internalAction({
       {},
     );
     const subs = await ctx.runQuery(internal.push.listAll, {});
+    const settings = await ctx.runQuery(internal.userSettings.getInternal, {});
 
     const goalsById = new Map<string, Doc<"goals">>(
       goals.map((g) => [g._id, g]),
@@ -255,14 +273,19 @@ export const tick = internalAction({
       if (!goal) continue;
       if ((goal.reviewedAt ?? null) !== null) continue;
 
-      const fireMs = nextFireForEntry(n, goal, nowMs - TICK_TOLERANCE_MS);
+      const fireMs = nextFireForEntry(
+        settings.timeZone,
+        n,
+        goal,
+        nowMs - TICK_TOLERANCE_MS,
+      );
       if (fireMs === null) continue;
       // Only process notifications whose fire time is now-or-just-past
       // (within tolerance). Future fires get caught by the next tick.
       if (fireMs > nowMs + 1000) continue;
 
       const targetMs = goal.targetDate
-        ? endOfDayPacific(goal.targetDate)
+        ? endOfDayLocal(settings.timeZone, goal.targetDate)
         : null;
       const isPastTarget = targetMs !== null && targetMs < nowMs;
 
@@ -311,8 +334,8 @@ export const tick = internalAction({
         internal.chat.public.createScopedCheckInThread,
         { scopeGoalIds },
       );
-      // Generate the opening message asynchronously — by the time Kyle
-      // taps the push, the message will have streamed in.
+      // Generate the opening message asynchronously so it is ready when
+      // the notification is opened.
       await ctx.scheduler.runAfter(
         0,
         internal.chat.public.openScopedCheckInChat,

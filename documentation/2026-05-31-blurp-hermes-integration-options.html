@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blurp × Hermes integration options</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      color: #e2e8f0;
+      line-height: 1.45;
+    }
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .header {
+      margin-bottom: 24px;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: #22d3ee;
+      border-radius: 999px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      color: #f8fafc;
+    }
+    .subtitle {
+      margin: 0 0 6px 24px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    .intro {
+      margin: 0 0 0 24px;
+      color: #cbd5e1;
+      font-size: 13px;
+      max-width: 1000px;
+    }
+    .legend-card,
+    .diagram-card,
+    .summary-card {
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+    }
+    .legend-card {
+      padding: 16px 18px;
+      margin-bottom: 20px;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px 16px;
+      margin-top: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+    .swatch {
+      width: 16px;
+      height: 10px;
+      border-radius: 4px;
+      border: 1px solid;
+      flex: 0 0 auto;
+    }
+    .diagrams {
+      display: grid;
+      gap: 22px;
+    }
+    .diagram-card {
+      padding: 16px;
+    }
+    .diagram-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .diagram-title {
+      margin: 0 0 8px 0;
+      color: #f8fafc;
+      font-size: 18px;
+    }
+    .diagram-desc {
+      margin: 0;
+      color: #94a3b8;
+      font-size: 12px;
+      max-width: 900px;
+    }
+    .badge {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+    .badge.good { background: rgba(6,78,59,0.35); border-color: #34d399; }
+    .badge.mid { background: rgba(120,53,15,0.3); border-color: #fbbf24; }
+    .badge.risk { background: rgba(136,19,55,0.32); border-color: #fb7185; }
+    .svg-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid #0f172a;
+      background: rgba(2,6,23,0.65);
+      margin-bottom: 14px;
+    }
+    svg {
+      width: 100%;
+      min-width: 1100px;
+      display: block;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .summary-card {
+      padding: 14px;
+    }
+    .summary-card h3 {
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      color: #f8fafc;
+    }
+    .summary-card ul {
+      margin: 0;
+      padding-left: 16px;
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+    .summary-card li { margin-bottom: 6px; }
+    .footer {
+      text-align: center;
+      margin-top: 22px;
+      color: #64748b;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Blurp × Hermes integration options</h1>
+      </div>
+      <p class="subtitle">System design sketches for keeping Blurp as the chat surface while Hermes runs on the user’s computer.</p>
+      <p class="intro">These diagrams are grounded in the current Blurp codebase: Convex owns thread/message state, the React app sends prompts through <code>api.chat.public.sendMessage</code>, and web push currently deep-links users back into the PWA rather than delivering full off-app chat.</p>
+    </div>
+
+    <div class="legend-card">
+      <strong style="font-size:13px;color:#f8fafc;">Legend</strong>
+      <div class="legend-grid">
+        <div class="legend-item"><span class="swatch" style="background:rgba(8,51,68,0.4);border-color:#22d3ee"></span> Blurp client / browser UI</div>
+        <div class="legend-item"><span class="swatch" style="background:rgba(76,29,149,0.4);border-color:#a78bfa"></span> Convex / app state</div>
+        <div class="legend-item"><span class="swatch" style="background:rgba(6,78,59,0.4);border-color:#34d399"></span> Hermes runtime on Mac</div>
+        <div class="legend-item"><span class="swatch" style="background:rgba(120,53,15,0.3);border-color:#fbbf24"></span> Public tunnel / API edge</div>
+        <div class="legend-item"><span class="swatch" style="background:rgba(136,19,55,0.35);border-color:#fb7185"></span> External worker / infra risk zone</div>
+        <div class="legend-item"><span class="swatch" style="background:rgba(30,41,59,0.5);border-color:#94a3b8"></span> Device / system actor</div>
+      </div>
+    </div>
+
+    <div class="diagrams">
+      <section class="diagram-card">
+        <div class="diagram-head">
+          <div>
+            <h2 class="diagram-title">Option A — Convex calls Hermes directly over HTTP</h2>
+            <p class="diagram-desc">Best if you want Blurp to remain the single frontend and are comfortable exposing a secured Hermes API endpoint from the home computer.</p>
+          </div>
+          <div class="badge good">Best product fit</div>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+              </marker>
+              <pattern id="gridA" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M40 0 L0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#gridA)"/>
+
+            <rect x="30" y="190" width="140" height="70" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="100" y="215" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">phone / PWA</text>
+            <text x="100" y="235" fill="#94a3b8" font-size="10" text-anchor="middle">User types in Blurp</text>
+
+            <rect x="250" y="160" width="190" height="130" rx="10" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+            <text x="345" y="188" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Blurp React app</text>
+            <text x="345" y="210" fill="#94a3b8" font-size="10" text-anchor="middle">Conversation.tsx</text>
+            <text x="345" y="225" fill="#94a3b8" font-size="10" text-anchor="middle">sendMessage(threadId, prompt)</text>
+            <text x="345" y="250" fill="#22d3ee" font-size="9" text-anchor="middle">Existing chat surface stays the same</text>
+
+            <rect x="520" y="130" width="220" height="190" rx="10" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="630" y="158" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Convex backend</text>
+            <text x="630" y="182" fill="#94a3b8" font-size="10" text-anchor="middle">chat.public.sendMessage action</text>
+            <text x="630" y="198" fill="#94a3b8" font-size="10" text-anchor="middle">thread + message persistence</text>
+            <text x="630" y="214" fill="#94a3b8" font-size="10" text-anchor="middle">proposalCards / notifications remain local</text>
+            <text x="630" y="248" fill="#a78bfa" font-size="9" text-anchor="middle">Convex remains source of truth</text>
+
+            <rect x="820" y="175" width="150" height="100" rx="8" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+            <text x="895" y="205" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Secure tunnel</text>
+            <text x="895" y="223" fill="#94a3b8" font-size="10" text-anchor="middle">Tailscale / Cloudflare</text>
+            <text x="895" y="238" fill="#94a3b8" font-size="10" text-anchor="middle">/v1/chat/completions</text>
+
+            <rect x="1020" y="145" width="150" height="160" rx="10" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+            <text x="1095" y="172" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Hermes on Mac</text>
+            <text x="1095" y="194" fill="#94a3b8" font-size="10" text-anchor="middle">API server runtime</text>
+            <text x="1095" y="210" fill="#94a3b8" font-size="10" text-anchor="middle">tools + memory + skills</text>
+            <text x="1095" y="235" fill="#34d399" font-size="9" text-anchor="middle">Executes on home machine</text>
+
+            <line x1="170" y1="225" x2="248" y2="225" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#arrowA)"/>
+            <text x="208" y="217" fill="#94a3b8" font-size="9" text-anchor="middle">UI input</text>
+            <line x1="440" y1="225" x2="518" y2="225" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#arrowA)"/>
+            <text x="480" y="217" fill="#94a3b8" font-size="9" text-anchor="middle">Convex function call</text>
+            <line x1="740" y1="225" x2="818" y2="225" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#arrowA)"/>
+            <text x="780" y="217" fill="#94a3b8" font-size="9" text-anchor="middle">HTTPS request</text>
+            <line x1="970" y1="225" x2="1018" y2="225" stroke="#34d399" stroke-width="1.6" marker-end="url(#arrowA)"/>
+            <text x="994" y="217" fill="#94a3b8" font-size="9" text-anchor="middle">agent run</text>
+
+            <path d="M1020 265 C930 350, 760 380, 630 320" fill="none" stroke="#34d399" stroke-width="1.6" stroke-dasharray="4,4" marker-end="url(#arrowA)"/>
+            <text x="850" y="360" fill="#94a3b8" font-size="9" text-anchor="middle">assistant response / structured result back to Convex</text>
+          </svg>
+        </div>
+        <div class="meta-grid">
+          <div class="summary-card">
+            <h3>How messages go in</h3>
+            <ul>
+              <li>Phone sends prompt through the existing Blurp chat UI.</li>
+              <li>Convex action becomes the integration point.</li>
+              <li>Convex forwards prompt + context to Hermes HTTP API.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>How replies come back</h3>
+            <ul>
+              <li>Hermes returns text (or structured output) in the same HTTP call.</li>
+              <li>Convex writes the assistant turn into the existing thread.</li>
+              <li>Blurp UI renders it using the current thread/message model.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>Main tradeoff</h3>
+            <ul>
+              <li>Clean architecture and best UX fit.</li>
+              <li>Requires a secure public or semi-public route to the Mac.</li>
+              <li>Need auth, availability, and timeout handling.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="diagram-card">
+        <div class="diagram-head">
+          <div>
+            <h2 class="diagram-title">Option B — Mac worker polls Convex and runs Hermes locally</h2>
+            <p class="diagram-desc">Best if you want Hermes to stay private on the home computer and do not want Convex calling into your machine over the internet.</p>
+          </div>
+          <div class="badge mid">Safest networking model</div>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+              </marker>
+              <pattern id="gridB" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M40 0 L0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#gridB)"/>
+
+            <rect x="30" y="210" width="140" height="70" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="100" y="236" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">phone / PWA</text>
+            <text x="100" y="255" fill="#94a3b8" font-size="10" text-anchor="middle">Chat inside Blurp</text>
+
+            <rect x="240" y="180" width="220" height="130" rx="10" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+            <text x="350" y="208" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Blurp client</text>
+            <text x="350" y="232" fill="#94a3b8" font-size="10" text-anchor="middle">writes user message to Convex</text>
+            <text x="350" y="248" fill="#94a3b8" font-size="10" text-anchor="middle">marks thread/job as pending</text>
+
+            <rect x="530" y="135" width="250" height="220" rx="10" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="655" y="162" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Convex backend</text>
+            <text x="655" y="188" fill="#94a3b8" font-size="10" text-anchor="middle">threads + messages + pending jobs</text>
+            <text x="655" y="204" fill="#94a3b8" font-size="10" text-anchor="middle">could add hermesJobs table</text>
+            <text x="655" y="240" fill="#a78bfa" font-size="9" text-anchor="middle">No inbound connection to home computer needed</text>
+
+            <rect x="860" y="95" width="280" height="300" rx="12" fill="rgba(136,19,55,0.18)" stroke="#fb7185" stroke-width="1" stroke-dasharray="6,4"/>
+            <text x="876" y="116" fill="#fb7185" font-size="10" font-weight="600">the user's Mac / local-only zone</text>
+
+            <rect x="900" y="150" width="200" height="90" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="1000" y="178" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Blurp worker daemon</text>
+            <text x="1000" y="198" fill="#94a3b8" font-size="10" text-anchor="middle">polls / subscribes to Convex</text>
+            <text x="1000" y="214" fill="#94a3b8" font-size="10" text-anchor="middle">claims pending jobs</text>
+
+            <rect x="900" y="270" width="200" height="90" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+            <text x="1000" y="298" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Hermes local runtime</text>
+            <text x="1000" y="318" fill="#94a3b8" font-size="10" text-anchor="middle">Hermes CLI / API / embedded runner</text>
+            <text x="1000" y="334" fill="#94a3b8" font-size="10" text-anchor="middle">full local tool access</text>
+
+            <line x1="170" y1="245" x2="238" y2="245" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#arrowB)"/>
+            <line x1="460" y1="245" x2="528" y2="245" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#arrowB)"/>
+            <text x="494" y="236" fill="#94a3b8" font-size="9" text-anchor="middle">user turn stored</text>
+
+            <path d="M780 220 C820 220, 850 205, 898 196" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#arrowB)"/>
+            <text x="845" y="212" fill="#94a3b8" font-size="9" text-anchor="middle">worker fetches pending work</text>
+
+            <line x1="1000" y1="240" x2="1000" y2="268" stroke="#34d399" stroke-width="1.6" marker-end="url(#arrowB)"/>
+            <text x="1018" y="258" fill="#94a3b8" font-size="9">run Hermes</text>
+
+            <path d="M900 330 C820 400, 720 420, 620 354" fill="none" stroke="#34d399" stroke-width="1.6" stroke-dasharray="4,4" marker-end="url(#arrowB)"/>
+            <text x="766" y="420" fill="#94a3b8" font-size="9" text-anchor="middle">worker writes assistant reply back into Convex</text>
+          </svg>
+        </div>
+        <div class="meta-grid">
+          <div class="summary-card">
+            <h3>How messages go in</h3>
+            <ul>
+              <li>Blurp stores user messages immediately in Convex.</li>
+              <li>A pending Hermes job row is created for each turn.</li>
+              <li>A worker process on the Mac picks jobs up.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>How replies come back</h3>
+            <ul>
+              <li>Worker runs Hermes locally with full machine access.</li>
+              <li>Worker writes assistant output into Convex.</li>
+              <li>Phone receives the update through the normal Blurp realtime path.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>Main tradeoff</h3>
+            <ul>
+              <li>Strong security posture; no public Hermes endpoint.</li>
+              <li>More moving parts: queueing, retries, worker health.</li>
+              <li>Slightly less immediate than pure request/response.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="diagram-card">
+        <div class="diagram-head">
+          <div>
+            <h2 class="diagram-title">Option C — Blurp talks directly to Hermes from the browser</h2>
+            <p class="diagram-desc">Conceptually simple, but usually the weakest option because it pushes networking, auth, and uptime complexity into the mobile client.</p>
+          </div>
+          <div class="badge risk">Least recommended</div>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1200 470" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+              </marker>
+              <pattern id="gridC" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M40 0 L0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#gridC)"/>
+
+            <rect x="40" y="170" width="240" height="120" rx="10" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+            <text x="160" y="198" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Blurp PWA on phone</text>
+            <text x="160" y="222" fill="#94a3b8" font-size="10" text-anchor="middle">calls Hermes API directly</text>
+            <text x="160" y="238" fill="#94a3b8" font-size="10" text-anchor="middle">would need auth + reachability</text>
+            <text x="160" y="264" fill="#22d3ee" font-size="9" text-anchor="middle">Bypasses Convex for the live turn</text>
+
+            <rect x="380" y="155" width="180" height="150" rx="10" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+            <text x="470" y="183" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Public edge</text>
+            <text x="470" y="208" fill="#94a3b8" font-size="10" text-anchor="middle">DNS / tunnel / API auth</text>
+            <text x="470" y="224" fill="#94a3b8" font-size="10" text-anchor="middle">CORS / session security</text>
+            <text x="470" y="250" fill="#fbbf24" font-size="9" text-anchor="middle">Browser now depends on home infra</text>
+
+            <rect x="680" y="145" width="220" height="170" rx="10" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+            <text x="790" y="173" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Hermes API server on Mac</text>
+            <text x="790" y="198" fill="#94a3b8" font-size="10" text-anchor="middle">OpenAI-compatible endpoint</text>
+            <text x="790" y="214" fill="#94a3b8" font-size="10" text-anchor="middle">runs tools where Hermes lives</text>
+            <text x="790" y="240" fill="#34d399" font-size="9" text-anchor="middle">Good compute locality; bad product locality</text>
+
+            <rect x="980" y="170" width="160" height="120" rx="10" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="1060" y="198" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Convex</text>
+            <text x="1060" y="222" fill="#94a3b8" font-size="10" text-anchor="middle">optional persistence after</text>
+            <text x="1060" y="238" fill="#94a3b8" font-size="10" text-anchor="middle">the browser already talked to Hermes</text>
+
+            <line x1="280" y1="230" x2="378" y2="230" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#arrowC)"/>
+            <text x="330" y="221" fill="#94a3b8" font-size="9" text-anchor="middle">public HTTPS</text>
+            <line x1="560" y1="230" x2="678" y2="230" stroke="#34d399" stroke-width="1.6" marker-end="url(#arrowC)"/>
+            <text x="620" y="221" fill="#94a3b8" font-size="9" text-anchor="middle">chat call</text>
+            <path d="M900 230 C940 230, 950 230, 978 230" fill="none" stroke="#a78bfa" stroke-width="1.6" stroke-dasharray="4,4" marker-end="url(#arrowC)"/>
+            <text x="940" y="221" fill="#94a3b8" font-size="9" text-anchor="middle">save later</text>
+          </svg>
+        </div>
+        <div class="meta-grid">
+          <div class="summary-card">
+            <h3>How messages go in</h3>
+            <ul>
+              <li>Browser sends prompts directly to Hermes.</li>
+              <li>Convex is no longer the main ingress path.</li>
+              <li>The phone now depends on being able to reach your Mac.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>How replies come back</h3>
+            <ul>
+              <li>Hermes responds directly to the phone over HTTP/SSE.</li>
+              <li>Optional: mirror the transcript back into Convex afterward.</li>
+              <li>State split becomes awkward if persistence lags.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>Main tradeoff</h3>
+            <ul>
+              <li>Feels simple at first glance.</li>
+              <li>Usually worst for auth, resilience, and product coherence.</li>
+              <li>Not a great match for how Blurp is currently structured.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="diagram-card">
+        <div class="diagram-head">
+          <div>
+            <h2 class="diagram-title">Option D — Hybrid: Blurp keeps normal chat local, Hermes handles only special threads</h2>
+            <p class="diagram-desc">Use the current Blurp agent for lightweight/fast chats, but route selected thread types like check-ins, planning, or “assistant mode” to Hermes.</p>
+          </div>
+          <div class="badge mid">Incremental migration path</div>
+        </div>
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrowD" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+              </marker>
+              <pattern id="gridD" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M40 0 L0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#gridD)"/>
+
+            <rect x="40" y="180" width="180" height="90" rx="10" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+            <text x="130" y="208" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Blurp chat UI</text>
+            <text x="130" y="230" fill="#94a3b8" font-size="10" text-anchor="middle">same frontend for every thread</text>
+
+            <rect x="310" y="110" width="250" height="230" rx="10" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="435" y="138" fill="#fff" font-size="13" font-weight="600" text-anchor="middle">Convex router layer</text>
+            <text x="435" y="162" fill="#94a3b8" font-size="10" text-anchor="middle">if thread.kind === regular → Blurp agent</text>
+            <text x="435" y="178" fill="#94a3b8" font-size="10" text-anchor="middle">if thread.kind === hermes / advanced → Hermes</text>
+            <text x="435" y="212" fill="#a78bfa" font-size="9" text-anchor="middle">One thread model, two execution backends</text>
+
+            <rect x="670" y="120" width="180" height="90" rx="10" fill="rgba(8,51,68,0.22)" stroke="#22d3ee" stroke-width="1.5"/>
+            <text x="760" y="148" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Current Blurp agent</text>
+            <text x="760" y="170" fill="#94a3b8" font-size="10" text-anchor="middle">fast, local, app-specific tools</text>
+
+            <rect x="670" y="250" width="180" height="90" rx="10" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+            <text x="760" y="278" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">Hermes backend</text>
+            <text x="760" y="300" fill="#94a3b8" font-size="10" text-anchor="middle">tools, memory, computer control</text>
+
+            <rect x="950" y="250" width="180" height="90" rx="10" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="1040" y="278" fill="#fff" font-size="12" font-weight="600" text-anchor="middle">the user's computer</text>
+            <text x="1040" y="300" fill="#94a3b8" font-size="10" text-anchor="middle">Hermes executes here</text>
+
+            <line x1="220" y1="225" x2="308" y2="225" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#arrowD)"/>
+            <line x1="560" y1="175" x2="668" y2="165" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#arrowD)"/>
+            <text x="615" y="156" fill="#94a3b8" font-size="9" text-anchor="middle">default path</text>
+            <line x1="560" y1="265" x2="668" y2="295" stroke="#34d399" stroke-width="1.6" marker-end="url(#arrowD)"/>
+            <text x="615" y="300" fill="#94a3b8" font-size="9" text-anchor="middle">advanced path</text>
+            <line x1="850" y1="295" x2="948" y2="295" stroke="#34d399" stroke-width="1.6" marker-end="url(#arrowD)"/>
+          </svg>
+        </div>
+        <div class="meta-grid">
+          <div class="summary-card">
+            <h3>How messages go in</h3>
+            <ul>
+              <li>All user messages still enter through Blurp.</li>
+              <li>Convex decides which backend should handle the thread.</li>
+              <li>Check-ins or “Hermes mode” could be routed specially.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>How replies come back</h3>
+            <ul>
+              <li>Both backends write into the same thread abstraction.</li>
+              <li>UI does not need separate screens.</li>
+              <li>You can migrate gradually instead of replacing everything at once.</li>
+            </ul>
+          </div>
+          <div class="summary-card">
+            <h3>Main tradeoff</h3>
+            <ul>
+              <li>Great migration strategy.</li>
+              <li>More conceptual complexity because two agents coexist.</li>
+              <li>Good if you want to learn before fully committing.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p class="footer">Created for Blurp system-design exploration • 2026-05-31</p>
+  </div>
+</body>
+</html>

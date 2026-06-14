@@ -24,7 +24,7 @@ entries, weekly reviews). Each row:
   `{ kind: "ltg", ltgId: Id<"longTermGoals"> }`).
 - `schedule` — discriminated union:
   - `{ kind: "oneoff", at: number }` — absolute ms timestamp.
-  - `{ kind: "daily", time: "HH:MM" }` — daily at this Pacific time, until
+  - `{ kind: "daily", time: "HH:MM" }` — daily at this the user's configured time zone, until
     the parent's `endDate` passes.
 - `body` — plain-text message for the lock screen.
 - `createdAt` — ms timestamp.
@@ -47,7 +47,7 @@ or deleted, the same mutation deletes every notification row whose
 
 ### `pushSubscriptions` table
 
-Stores Web Push subscriptions Kyle has registered. Fields:
+Stores Web Push subscriptions the user has registered. Fields:
 
 - `endpoint` — push service URL.
 - `keys.p256dh`, `keys.auth` — encryption keys from `pushManager.subscribe()`.
@@ -90,7 +90,7 @@ flow. Tool signatures (exact field names finalized at build):
 `propose_edit_goal` is deliberately not extended with notification fields.
 Editing the title/dates of a goal and editing what pings about it are
 separate user intents — keeping them on separate tools keeps each
-proposal Kyle reviews about a single intent.
+proposal the user reviews about a single intent.
 
 The system prompt is updated to (a) explain the notification model to the
 assistant, (b) make the "include a post-`endDate` notification in every
@@ -141,7 +141,7 @@ When the scheduler fires at a given minute:
 4. **Check-in group** (past `endDate`): collapse into one scoped check-in
    chat. The chat's `scopeGoalIds` is the set of goal ids in this group.
    Generate the opening assistant message server-side so the conversation
-   is ready when Kyle taps. Emit one push with the goal-preview body
+   is ready when the user taps. Emit one push with the goal-preview body
    (functional spec §5) and a `?check-in=<threadId>` URL.
 
 Reminders and check-ins are processed as independent groups — neither
@@ -152,7 +152,7 @@ combines with the other.
 ## 5. Transport: PWA + Web Push
 
 Web Push via the PWA's service worker, authenticated with a VAPID
-keypair. The PWA is already installed on Kyle's iPhone home screen.
+keypair. The PWA is already installed on the user's phone home screen.
 
 The first-run flow in the PWA prompts for notification permission, calls
 `pushManager.subscribe()` with the app's VAPID public key, and saves the
@@ -166,7 +166,7 @@ live as Convex env vars.
 
 If `pushSubscriptions` is empty when a notification would fire, the
 scheduler still runs the bundling — for check-ins, it still creates the
-scoped chat, so Kyle finds the artifact next time he opens the app.
+scoped chat, so the user finds the artifact next time he opens the app.
 Reminder entries fire as no-ops in this case, since a reminder doesn't
 materialize anywhere besides the push.
 
@@ -199,7 +199,7 @@ The build splits into two pushes for verification:
 - **Push A — PWA + subscription plumbing.** Web app manifest, iOS icons,
   service worker, VAPID keypair, `pushSubscriptions` table, first-run
   permission prompt and subscription registration, plus a small "send a
-  test push" admin trigger. End state: a button on desktop causes Kyle's
+  test push" admin trigger. End state: a button on desktop causes the user's
   phone to buzz. No goals or notification entries are involved yet.
   Verifies that iOS Web Push actually works in his install before
   anything else is built on top.
@@ -211,7 +211,7 @@ The build splits into two pushes for verification:
   `propose_create_goal` and the three add/remove/update notification
   tools, the cascade-on-goal-deletion behavior, and the URL-param-driven
   tap targets in the frontend. End state: a goal with notifications
-  actually pings Kyle's phone at the configured times, and tapping opens
+  actually pings the user's phone at the configured times, and tapping opens
   the right place.
 
 Push A is shippable on its own and de-risks the iOS-side unknowns. Push B

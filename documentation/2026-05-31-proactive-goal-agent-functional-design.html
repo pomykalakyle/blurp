@@ -407,7 +407,7 @@
       <div class="kicker">Product behavior</div>
       <h1>Blurp Proactive Goal Agent</h1>
       <p class="summary">
-        Blurp should stop acting like a passive goal ledger. It should become an active thinking partner that notices drift, finds useful openings, follows up when timing matters, and learns what actually helps Kyle move toward the goals he cares about.
+        Blurp should stop acting like a passive goal ledger. It should become an active thinking partner that notices drift, finds useful openings, follows up when timing matters, and learns what actually helps the user move toward the goals he cares about.
       </p>
       <p class="summary">
         This document defines the user-facing product behavior for that change. It does not define the technical implementation details behind the agent, memory, scheduling, prompts, tools, or storage.
@@ -426,10 +426,10 @@
           <div class="subsection" id="thesis">
             <h3>Active Goal-Seeking</h3>
             <p>
-              Blurp should act like a second brain focused on helping Kyle reach his goals. It should carry some of the noticing, remembering, researching, following up, and strategy adjustment that Kyle would otherwise have to do alone.
+              Blurp should act like a second brain focused on helping the user reach his goals. It should carry some of the noticing, remembering, researching, following up, and strategy adjustment that the user would otherwise have to do alone.
             </p>
             <p>
-              The product should keep thinking about how to help even when Kyle is not actively driving the conversation. Blurp is an active participant in goal progress; when it reaches out, it should feel like something has been paying attention on Kyle's behalf.
+              The product should keep thinking about how to help even when the user is not actively driving the conversation. Blurp is an active participant in goal progress; when it reaches out, it should feel like something has been paying attention on the user's behalf.
             </p>
           </div>
 
@@ -452,15 +452,15 @@
                   <li>Long-term goals and short-term goals remain part of the product.</li>
                   <li>Goal creation and editing remain the same.</li>
                   <li>Goal dates, outcomes, notes, and changes remain part of the goal landscape Blurp reasons from.</li>
-                  <li>Kyle can still use goals to name what he is trying to move toward.</li>
+                  <li>the user can still use goals to name what he is trying to move toward.</li>
                 </ul>
               </div>
               <div class="card">
                 <h3>Replacement behavior</h3>
                 <ul>
                   <li>Heartbeats and tasks give Blurp recurring chances to think and decide what, if anything, to do.</li>
-                  <li>The agent learns what helps Kyle move toward his goals.</li>
-                  <li>Blurp builds a psychological model of Kyle oriented around helping him move toward the goals he cares about.</li>
+                  <li>The agent learns what helps the user move toward his goals.</li>
+                  <li>Blurp builds a psychological model of the user oriented around helping him move toward the goals he cares about.</li>
                   <li>Proactive contact appears as a normal chat thread and phone ping.</li>
                 </ul>
               </div>
@@ -485,7 +485,7 @@
               <tbody>
                 <tr>
                   <td>8:30am Eastern</td>
-                  <td>Chosen because Kyle is often at the dog park and free enough to read something.</td>
+                  <td>Default morning heartbeat.</td>
                 </tr>
                 <tr>
                   <td>1:30pm Eastern</td>
@@ -493,7 +493,7 @@
                 </tr>
                 <tr>
                   <td>6:30pm Eastern</td>
-                  <td>Default daily heartbeat before Kyle's sleep window.</td>
+                  <td>Default evening heartbeat.</td>
                 </tr>
               </tbody>
             </table>
@@ -511,10 +511,10 @@
               The brief can come from conversation, goals, outside events, or the agent's own prior work. It gives Blurp the right starting point when that task begins.
             </p>
             <ul>
-              <li>Follow up after Kyle expects to be back from a date, with the date as context.</li>
+              <li>Follow up after the user expects to be back from a date, with the date as context.</li>
               <li>Follow up near the time of a local-government event, with the event link or description as context.</li>
               <li>Follow up before an opportunity window closes, with the relevant goal and deadline as context.</li>
-              <li>Revisit an event schedule Blurp has been tracking, with the reason it might matter to Kyle as context.</li>
+              <li>Revisit an event schedule Blurp has been tracking, with the reason it might matter to the user as context.</li>
             </ul>
           </div>
 
@@ -527,7 +527,7 @@
               The scheduling capability includes a brief field. The agent writes the handoff text for the future task there, so the future activation knows what situation it is being asked to continue.
             </p>
             <p>
-              Creating a task is an internal agent action. Blurp can schedule one without asking Kyle to confirm it, and pending tasks do not need to appear as user-facing objects. If it is useful in conversation, Blurp may naturally mention that it will check back or revisit something later.
+              Creating a task is an internal agent action. Blurp can schedule one without asking the user to confirm it, and pending tasks do not need to appear as user-facing objects. If it is useful in conversation, Blurp may naturally mention that it will check back or revisit something later.
             </p>
           </div>
         </section>
@@ -535,15 +535,15 @@
         <section id="agent-activation-flow">
           <h2>Agent Activation Flow</h2>
           <p>
-            This section describes the product-level sequence of an agent activation: Blurp starts from why the activation exists, learns from relevant recent activity when appropriate, works toward goal progress, and contacts Kyle when that would help. The sequence gives the activation shape without turning it into a fixed-output workflow.
+            This section describes the product-level sequence of an agent activation: Blurp starts from why the activation exists, learns from relevant recent activity when appropriate, works toward goal progress, and contacts the user when that would help. The sequence gives the activation shape without turning it into a fixed-output workflow.
           </p>
           <div class="subsection" id="orient-activation-brief">
             <h3>Start From Why It Exists</h3>
             <p>
-              Each activation starts from the reason it exists. A heartbeat has broad responsibility for Kyle's current goal landscape. A task starts from its attached brief: an event, date, deadline, opportunity window, prior thought, or other scheduled reason. The brief gives the activation its starting point, and Blurp can use current context to understand how the situation has changed since the task was scheduled.
+              Each activation starts from the reason it exists. A heartbeat has broad responsibility for the user's current goal landscape. A task starts from its attached brief: an event, date, deadline, opportunity window, prior thought, or other scheduled reason. The brief gives the activation its starting point, and Blurp can use current context to understand how the situation has changed since the task was scheduled.
             </p>
             <p>
-              For heartbeats, Blurp's attention starts from the goal-support mission: find where its work is most likely to help Kyle move toward the goals he cares about.
+              For heartbeats, Blurp's attention starts from the goal-support mission: find where its work is most likely to help the user move toward the goals he cares about.
             </p>
             <p>
               The activation's job is to improve the odds of progress from that starting point.
@@ -561,16 +561,16 @@
             </p>
             <h4>What Blurp learns</h4>
             <p>
-              Blurp builds a psychological model of Kyle so it can understand him well enough to help. This includes preferences, motivation, friction, timing, tone, recurring patterns, and the situations where Kyle tends to engage, avoid, stall, or follow through.
+              Blurp builds a psychological model of the user so it can understand him well enough to help. This includes preferences, motivation, friction, timing, tone, recurring patterns, and the situations where the user tends to engage, avoid, stall, or follow through.
             </p>
             <p>
-              Blurp also learns what works. It tracks which kinds of help actually move Kyle toward his goals: useful timing, effective follow-up, helpful research, good questions, bad interruptions, successful reframes, and strategies that made progress more likely.
+              Blurp also learns what works. It tracks which kinds of help actually move the user toward his goals: useful timing, effective follow-up, helpful research, good questions, bad interruptions, successful reframes, and strategies that made progress more likely.
             </p>
             <p>
-              These two forms of learning inform each other. The psychological model helps Blurp choose better strategies, and the results of those strategies update what Blurp understands about Kyle. Both are oriented around helping Kyle move toward the goals he cares about.
+              These two forms of learning inform each other. The psychological model helps Blurp choose better strategies, and the results of those strategies update what Blurp understands about the user. Both are oriented around helping the user move toward the goals he cares about.
             </p>
             <p>
-              Natural-language steering is part of recent activity. When Kyle corrects Blurp, asks it to slow down, tells it to stop pursuing a topic, replies later, stays silent, shows interest, says a message was useful or annoying, or changes how he wants the agent to behave, Blurp carries that forward into future activations, contact decisions, and its internal model of Kyle.
+              Natural-language steering is part of recent activity. When the user corrects Blurp, asks it to slow down, tells it to stop pursuing a topic, replies later, stays silent, shows interest, says a message was useful or annoying, or changes how he wants the agent to behave, Blurp carries that forward into future activations, contact decisions, and its internal model of the user.
             </p>
             <p>
               When a goal outcome or follow-through pattern is informative, Blurp can treat it as a retrospective: understand what happened, update its strategy, and carry the learning into future activations.
@@ -586,26 +586,26 @@
               Blurp can reason, revise its strategy, and continue exploring as the situation develops. It also has tools available during this phase, including capabilities such as researching outside information, inspecting available app context, scheduling a task, or using other useful tools added over time.
             </p>
             <p>
-              The work can be iterative. Blurp might research an event, learn that it is more relevant than expected, then decide to involve Kyle. Or it might investigate an opportunity and carry what it learned forward for a better moment.
+              The work can be iterative. Blurp might research an event, learn that it is more relevant than expected, then decide to involve the user. Or it might investigate an opportunity and carry what it learned forward for a better moment.
             </p>
             <p>
-              The useful shape of an activation comes from the work itself rather than from a predefined result it must produce. For example, Blurp may contact Kyle, keep working internally, schedule a task, or simply finish after doing enough for that moment.
+              The useful shape of an activation comes from the work itself rather than from a predefined result it must produce. For example, Blurp may contact the user, keep working internally, schedule a task, or simply finish after doing enough for that moment.
             </p>
           </div>
 
-          <div class="subsection" id="contact-kyle">
-            <h3>Contact Kyle When Useful</h3>
+          <div class="subsection" id="contact-user">
+            <h3>Contact the user When Useful</h3>
             <p>
-              If an activation needs Kyle's attention, Blurp creates a new ordinary chat thread and sends a phone notification that opens it. The opening message should fit what the activation found useful to say in that moment, such as a question, finding, proposed direction, follow-up, or another useful form of contact.
+              If an activation needs the user's attention, Blurp creates a new ordinary chat thread and sends a phone notification that opens it. The opening message should fit what the activation found useful to say in that moment, such as a question, finding, proposed direction, follow-up, or another useful form of contact.
             </p>
             <p>
-              Contact is one possible action during an activation. Blurp reaches out when, based on the reason for the activation, what it found while working, Kyle's goals, and what it has learned about how to help him, involving Kyle seems likely to help him move toward a goal, clarify something the agent cannot resolve alone, or preserve useful momentum. An activation can also save learning, schedule a task, continue working, or let the thread of work rest.
+              Contact is one possible action during an activation. Blurp reaches out when, based on the reason for the activation, what it found while working, the user's goals, and what it has learned about how to help him, involving the user seems likely to help him move toward a goal, clarify something the agent cannot resolve alone, or preserve useful momentum. An activation can also save learning, schedule a task, continue working, or let the thread of work rest.
             </p>
             <p>
-              Blurp's contact judgment improves from Kyle's reactions. If Kyle responds better at certain times, ignores certain kinds of outreach, or says a kind of contact is annoying, future activations should use that learning when deciding whether and how to contact him.
+              Blurp's contact judgment improves from the user's reactions. If the user responds better at certain times, ignores certain kinds of outreach, or says a kind of contact is annoying, future activations should use that learning when deciding whether and how to contact him.
             </p>
             <p>
-              The new thread behaves like any other chat. Kyle can reply, ignore it, accept proposals, dismiss proposals, or steer it somewhere else in natural language, and Blurp can learn from what happens afterward.
+              The new thread behaves like any other chat. the user can reply, ignore it, accept proposals, dismiss proposals, or steer it somewhere else in natural language, and Blurp can learn from what happens afterward.
             </p>
           </div>
         </section>
@@ -637,7 +637,7 @@
         <a class="subnav" href="#orient-activation-brief">3.1 Start From Why It Exists</a>
         <a class="subnav" href="#learn-recent-activity">3.2 Learn From Recent Activity</a>
         <a class="subnav" href="#work-goal-problem">3.3 Pursue Goal Progress</a>
-        <a class="subnav" href="#contact-kyle">3.4 Contact Kyle When Useful</a>
+        <a class="subnav" href="#contact-user">3.4 Contact the user When Useful</a>
         <a href="#out-of-scope">Out of Scope</a>
       </nav>
     </main>
