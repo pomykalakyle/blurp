@@ -257,13 +257,22 @@ export const listSidebarItems = query({
         paginationOpts: { cursor: null, numItems: 100 },
       },
     );
-    const completedActivations = await ctx.db
-      .query("agentActivations")
-      .withIndex("by_status_and_scheduledAt", (q) =>
-        q.eq("status", "completed"),
-      )
-      .order("desc")
-      .take(100);
+    const [runningActivations, completedActivations] = await Promise.all([
+      ctx.db
+        .query("agentActivations")
+        .withIndex("by_status_and_scheduledAt", (q) =>
+          q.eq("status", "running"),
+        )
+        .order("desc")
+        .take(50),
+      ctx.db
+        .query("agentActivations")
+        .withIndex("by_status_and_scheduledAt", (q) =>
+          q.eq("status", "completed"),
+        )
+        .order("desc")
+        .take(100),
+    ]);
 
     const chatItems = (threads.page as AgentThreadSummary[]).map((thread) => ({
       type: "chat" as const,
@@ -272,11 +281,15 @@ export const listSidebarItems = query({
       title: thread.title ?? null,
       sortTime: thread._creationTime,
     }));
-    const activationItems = completedActivations.map((activation) => ({
+    const activationItems = [
+      ...runningActivations,
+      ...completedActivations,
+    ].map((activation) => ({
       type: "activation" as const,
       id: activation._id,
       activationId: activation._id,
       kind: activation.kind,
+      status: activation.status,
       scheduledAt: activation.scheduledAt,
       brief: activation.brief,
       sortTime: activation.scheduledAt,

@@ -9,6 +9,19 @@ type ScheduledTaskResult = {
   activationId: string;
   scheduledAt: number;
 };
+type MessageKyleResult = {
+  notified: boolean;
+  activationId: string | null;
+  sent: number;
+  removed: number;
+  failed: number;
+  reason:
+    | "sent"
+    | "activation_not_found"
+    | "activation_not_active"
+    | "no_subscriptions"
+    | "send_failed";
+};
 type LtgLookupResult = {
   id: string;
   title: string;
@@ -146,6 +159,32 @@ function makeScheduleTaskTool(sourceType: "ordinary_chat" | "agent_activation") 
 
 export const scheduleTaskFromChat = makeScheduleTaskTool("ordinary_chat");
 export const scheduleTaskFromAgent = makeScheduleTaskTool("agent_activation");
+
+export const messageKyleFromActivation = createTool({
+  description:
+    "Get Kyle's attention about the current activation. This sends a push notification; tapping it opens this activation's existing transcript. Use only when Kyle should look at the activation now. It does not create a new chat thread.",
+  inputSchema: z.object({
+    body: z
+      .string()
+      .describe(
+        "Short notification text telling Kyle why he should open this activation.",
+      ),
+    title: z
+      .string()
+      .optional()
+      .describe("Optional notification title. Usually omit this."),
+  }),
+  execute: async (ctx, input): Promise<MessageKyleResult> => {
+    if (!ctx.threadId) {
+      throw new Error("message_kyle called outside an activation thread");
+    }
+    return await ctx.runAction(internal.agentActivations.messageKyle, {
+      agentThreadId: ctx.threadId,
+      body: input.body,
+      title: input.title,
+    });
+  },
+});
 
 export const proposeCreateGoal = makeProposeTool({
   description:

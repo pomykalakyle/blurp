@@ -10,7 +10,7 @@ import {
   internalMutation,
   query,
 } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import {
   PROACTIVE_PROVIDER_OPTIONS,
@@ -67,6 +67,35 @@ const agentActivationViewValidator = v.object({
   sourceType: sourceTypeValidator,
   agentThreadId: v.string(),
 });
+
+const activationPushResultValidator = v.object({
+  notified: v.boolean(),
+  activationId: v.union(v.id("agentActivations"), v.null()),
+  sent: v.number(),
+  removed: v.number(),
+  failed: v.number(),
+  reason: v.union(
+    v.literal("sent"),
+    v.literal("activation_not_found"),
+    v.literal("activation_not_active"),
+    v.literal("no_subscriptions"),
+    v.literal("send_failed"),
+  ),
+});
+
+type ActivationPushResult = {
+  notified: boolean;
+  activationId: Id<"agentActivations"> | null;
+  sent: number;
+  removed: number;
+  failed: number;
+  reason:
+    | "sent"
+    | "activation_not_found"
+    | "activation_not_active"
+    | "no_subscriptions"
+    | "send_failed";
+};
 
 async function createScheduledActivation(
   ctx: MutationCtx,
@@ -153,6 +182,93 @@ export const listActivationMessages = query({
       },
     );
     return { activation, messages: messages.page };
+  },
+});
+
+export const getByAgentThreadId = internalQuery({
+  args: { agentThreadId: v.string() },
+  returns: v.union(agentActivationViewValidator, v.null()),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("agentActivations")
+      .withIndex("by_agentThreadId", (q) =>
+        q.eq("agentThreadId", args.agentThreadId),
+      )
+      .unique();
+  },
+});
+
+export const messageKyle = internalAction({
+  args: {
+    agentThreadId: v.string(),
+    body: v.string(),
+    title: v.optional(v.string()),
+  },
+  returns: activationPushResultValidator,
+  handler: async (ctx, args): Promise<ActivationPushResult> => {
+    const activation: Doc<"agentActivations"> | null = await ctx.runQuery(
+      internal.agentActivations.getByAgentThreadId,
+      { agentThreadId: args.agentThreadId },
+    );
+    if (!activation) {
+      return {
+        notified: false,
+        activationId: null,
+        sent: 0,
+        removed: 0,
+        failed: 0,
+        reason: "activation_not_found",
+      };
+    }
+    if (activation.status !== "running" && activation.status !== "completed") {
+      return {
+        notified: false,
+        activationId: activation._id,
+        sent: 0,
+        removed: 0,
+        failed: 0,
+        reason: "activation_not_active",
+      };
+    }
+
+    const subs: Doc<"pushSubscriptions">[] = await ctx.runQuery(
+      internal.push.listAll,
+      {},
+    );
+    if (subs.length === 0) {
+      return {
+        notified: false,
+        activationId: activation._id,
+        sent: 0,
+        removed: 0,
+        failed: 0,
+        reason: "no_subscriptions",
+      };
+    }
+
+    const payload = JSON.stringify({
+      title: args.title ?? "blurp",
+      body: args.body,
+      url: `/?activation=${activation._id}`,
+    });
+    const result: { sent: number; removed: number; failed: number } =
+      await ctx.runAction(internal.pushNode.sendBulk, {
+        items: subs.map((sub) => ({
+          endpoint: sub.endpoint,
+          p256dh: sub.keys.p256dh,
+          auth: sub.keys.auth,
+          payload,
+        })),
+      });
+
+    return {
+      notified: result.sent > 0,
+      activationId: activation._id,
+      sent: result.sent,
+      removed: result.removed,
+      failed: result.failed,
+      reason: result.sent > 0 ? "sent" : "send_failed",
+    };
   },
 });
 

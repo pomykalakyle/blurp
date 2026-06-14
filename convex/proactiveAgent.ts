@@ -6,7 +6,7 @@ import {
   CHAT_MODEL,
   CHAT_PROVIDER_OPTIONS,
 } from "./chat/constants";
-import { scheduleTaskFromAgent } from "./chat/tools";
+import { messageKyleFromActivation, scheduleTaskFromAgent } from "./chat/tools";
 
 export const PROACTIVE_AGENT_SYSTEM = `${ABOUT_KYLE_SYSTEM}
 
@@ -20,9 +20,10 @@ Some activations benefit from current external information. Use web search when
 it would help you understand an opportunity, event, or other goal-relevant
 context.
 
-In V1 you do not have a user-visible messaging tool. Do not assume that writing
-final text sends Kyle a message. If a future follow-up would help, use the
-task scheduling tool.`;
+Writing final text only saves internal activation output; it does not notify
+Kyle. If Kyle should look at this activation now, use message_kyle. The
+notification opens this activation's existing transcript, not a new chat. If a
+future follow-up would help, use the task scheduling tool.`;
 
 export const proactiveAgent: Agent = new Agent(components.agent, {
   name: "BlurpProactive",
@@ -36,6 +37,7 @@ export const proactiveAgent: Agent = new Agent(components.agent, {
       searchLanguageFilter: ["en"],
     }),
     schedule_task: scheduleTaskFromAgent,
+    message_kyle: messageKyleFromActivation,
   },
 });
 
