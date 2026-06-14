@@ -240,6 +240,54 @@ export const listThreads = query({
   },
 });
 
+type AgentThreadSummary = {
+  _id: string;
+  _creationTime: number;
+  title?: string | null;
+};
+
+export const listSidebarItems = query({
+  args: {},
+  handler: async (ctx) => {
+    const threads = await ctx.runQuery(
+      components.agent.threads.listThreadsByUserId,
+      {
+        userId: USER_ID,
+        order: "desc",
+        paginationOpts: { cursor: null, numItems: 100 },
+      },
+    );
+    const completedActivations = await ctx.db
+      .query("agentActivations")
+      .withIndex("by_status_and_scheduledAt", (q) =>
+        q.eq("status", "completed"),
+      )
+      .order("desc")
+      .take(100);
+
+    const chatItems = (threads.page as AgentThreadSummary[]).map((thread) => ({
+      type: "chat" as const,
+      id: thread._id,
+      threadId: thread._id,
+      title: thread.title ?? null,
+      sortTime: thread._creationTime,
+    }));
+    const activationItems = completedActivations.map((activation) => ({
+      type: "activation" as const,
+      id: activation._id,
+      activationId: activation._id,
+      kind: activation.kind,
+      scheduledAt: activation.scheduledAt,
+      brief: activation.brief,
+      sortTime: activation.scheduledAt,
+    }));
+
+    return [...chatItems, ...activationItems]
+      .sort((a, b) => b.sortTime - a.sortTime)
+      .slice(0, 150);
+  },
+});
+
 export const getThread = query({
   args: { threadId: v.string() },
   handler: async (ctx, args) => {

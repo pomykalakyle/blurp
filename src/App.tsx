@@ -8,6 +8,7 @@ import { NarrativeScreen } from "./screens/NarrativeScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { AgentActivationsScreen } from "./screens/AgentActivationsScreen";
 import { api } from "../convex/_generated/api";
+import type { SidebarSelection } from "./sidebarSelection";
 
 // Read ?check-in=<threadId> / ?goal=<goalId> once at startup so a tap on
 // a Web Push notification (which loads the PWA at one of those URLs)
@@ -37,9 +38,10 @@ export default function App() {
     deepLink?.section ?? "goals",
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [currentThreadId, setCurrentThreadId] = useState<string | null>(
-    deepLink?.threadId ?? null,
-  );
+  const [selectedTarget, setSelectedTarget] = useState<SidebarSelection>({
+    type: "chat",
+    threadId: deepLink?.threadId ?? null,
+  });
 
   // Clear the deep-link params so a refresh doesn't keep re-firing them.
   useEffect(() => {
@@ -54,7 +56,12 @@ export default function App() {
 
   const goToChat = (threadId: string | null) => {
     setActiveSection("chat");
-    setCurrentThreadId(threadId);
+    setSelectedTarget({ type: "chat", threadId });
+  };
+
+  const goToTarget = (target: SidebarSelection) => {
+    setActiveSection("chat");
+    setSelectedTarget(target);
   };
 
   const handleNewCheckIn = async () => {
@@ -70,8 +77,8 @@ export default function App() {
         onSelectSection={setActiveSection}
         drawerOpen={drawerOpen}
         onSetDrawerOpen={setDrawerOpen}
-        currentThreadId={currentThreadId}
-        onSelectThread={(id) => goToChat(id)}
+        selectedTarget={selectedTarget}
+        onSelectTarget={goToTarget}
         onNewChat={() => goToChat(null)}
       >
         {activeSection === "goals" && (
@@ -79,8 +86,10 @@ export default function App() {
         )}
         {activeSection === "chat" && (
           <ChatScreen
-            threadId={currentThreadId}
-            onThreadCreated={(id) => setCurrentThreadId(id)}
+            selectedTarget={selectedTarget}
+            onThreadCreated={(id) =>
+              setSelectedTarget({ type: "chat", threadId: id })
+            }
             onNewCheckIn={handleNewCheckIn}
           />
         )}

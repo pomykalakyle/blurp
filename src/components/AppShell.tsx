@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { FONT_DISPLAY } from "./ui";
 import { ChatList } from "./chat/ChatList";
+import type { SidebarSelection } from "../sidebarSelection";
 
 export type Section =
   | "goals"
@@ -43,8 +44,8 @@ type Props = {
   onSelectSection: (s: Section) => void;
   drawerOpen: boolean;
   onSetDrawerOpen: (open: boolean) => void;
-  currentThreadId: string | null;
-  onSelectThread: (id: string | null) => void;
+  selectedTarget: SidebarSelection;
+  onSelectTarget: (target: SidebarSelection) => void;
   onNewChat: () => void;
   children: ReactNode;
 };
@@ -55,8 +56,8 @@ export function AppShell(props: Props) {
     onSelectSection,
     drawerOpen,
     onSetDrawerOpen,
-    currentThreadId,
-    onSelectThread,
+    selectedTarget,
+    onSelectTarget,
     onNewChat,
     children,
   } = props;
@@ -138,9 +139,9 @@ export function AppShell(props: Props) {
           </div>
           <div className="flex-1 overflow-y-auto scroll-thin px-2 pb-3">
             <ChatList
-              currentThreadId={currentThreadId}
-              onSelect={(id) => {
-                onSelectThread(id);
+              selectedTarget={selectedTarget}
+              onSelect={(target) => {
+                onSelectTarget(target);
                 closeDrawer();
               }}
             />
