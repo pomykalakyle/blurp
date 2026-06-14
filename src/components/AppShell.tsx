@@ -2,7 +2,6 @@ import { ReactNode } from "react";
 import {
   Activity,
   BookOpen,
-  ClipboardCheck,
   Menu,
   MessageSquare,
   Plus,
@@ -17,7 +16,6 @@ export type Section =
   | "goals"
   | "chat"
   | "narrative"
-  | "checkIn"
   | "agentActivations"
   | "settings";
 
@@ -25,13 +23,11 @@ const SECTION_LABELS: Record<Section, string> = {
   goals: "Goals",
   chat: "Chat",
   narrative: "Narrative",
-  checkIn: "Check-in",
   agentActivations: "Activations",
   settings: "Settings",
 };
 
 const SECTION_ITEMS: Array<{ id: Section; icon: typeof Target }> = [
-  { id: "checkIn", icon: ClipboardCheck },
   { id: "chat", icon: MessageSquare },
   { id: "narrative", icon: BookOpen },
   { id: "goals", icon: Target },
@@ -48,11 +44,8 @@ type Props = {
   drawerOpen: boolean;
   onSetDrawerOpen: (open: boolean) => void;
   currentThreadId: string | null;
-  currentCheckInThreadId: string | null;
   onSelectThread: (id: string | null) => void;
-  onSelectCheckInThread: (id: string | null) => void;
   onNewChat: () => void;
-  onNewCheckIn: () => void;
   children: ReactNode;
 };
 
@@ -63,23 +56,13 @@ export function AppShell(props: Props) {
     drawerOpen,
     onSetDrawerOpen,
     currentThreadId,
-    currentCheckInThreadId,
     onSelectThread,
-    onSelectCheckInThread,
     onNewChat,
-    onNewCheckIn,
     children,
   } = props;
 
   const closeDrawer = () => onSetDrawerOpen(false);
   const selectSection = (s: Section) => {
-    // Land directly inside a fresh check-in when arriving from outside the
-    // section, instead of stopping at the empty "New check-in" prompt.
-    if (s === "checkIn" && activeSection !== "checkIn") {
-      onNewCheckIn();
-      closeDrawer();
-      return;
-    }
     onSelectSection(s);
     closeDrawer();
   };
@@ -141,57 +124,28 @@ export function AppShell(props: Props) {
           ))}
         </nav>
 
-        {activeSection === "chat" && (
-          <div className="border-t border-soft mt-2 pt-3 flex-1 flex flex-col min-h-0">
-            <div className="px-3 mb-2">
-              <button
-                onClick={() => {
-                  onNewChat();
-                  closeDrawer();
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-surface-2 text-cream hover-bg-surface-3"
-              >
-                <Plus size={14} /> New chat
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto scroll-thin px-2 pb-3">
-              <ChatList
-                currentThreadId={currentThreadId}
-                onSelect={(id) => {
-                  onSelectThread(id);
-                  closeDrawer();
-                }}
-              />
-            </div>
+        <div className="border-t border-soft mt-2 pt-3 flex-1 flex flex-col min-h-0">
+          <div className="px-3 mb-2">
+            <button
+              onClick={() => {
+                onNewChat();
+                closeDrawer();
+              }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-surface-2 text-cream hover-bg-surface-3"
+            >
+              <Plus size={14} /> New chat
+            </button>
           </div>
-        )}
-
-        {activeSection === "checkIn" && (
-          <div className="border-t border-soft mt-2 pt-3 flex-1 flex flex-col min-h-0">
-            <div className="px-3 mb-2">
-              <button
-                onClick={() => {
-                  onNewCheckIn();
-                  closeDrawer();
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-surface-2 text-cream hover-bg-surface-3"
-              >
-                <Plus size={14} /> New check-in
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-2 pb-3">
-              <ChatList
-                kind="checkIn"
-                currentThreadId={currentCheckInThreadId}
-                emptyText="No check-ins yet."
-                onSelect={(id) => {
-                  onSelectCheckInThread(id);
-                  closeDrawer();
-                }}
-              />
-            </div>
+          <div className="flex-1 overflow-y-auto scroll-thin px-2 pb-3">
+            <ChatList
+              currentThreadId={currentThreadId}
+              onSelect={(id) => {
+                onSelectThread(id);
+                closeDrawer();
+              }}
+            />
           </div>
-        )}
+        </div>
 
         <nav className="mt-auto px-3 py-3 border-t border-soft">
           {FOOTER_ITEMS.map(({ id, icon: Icon }) => (

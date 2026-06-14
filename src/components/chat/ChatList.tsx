@@ -5,21 +5,10 @@ import { api } from "../../../convex/_generated/api";
 type Props = {
   currentThreadId: string | null;
   onSelect: (threadId: string) => void;
-  kind?: "regular" | "checkIn";
-  emptyText?: string;
 };
 
-export function ChatList({
-  currentThreadId,
-  onSelect,
-  kind = "regular",
-  emptyText,
-}: Props) {
-  const threads = useQuery(
-    kind === "checkIn"
-      ? api.chat.public.listCheckInThreads
-      : api.chat.public.listThreads,
-  );
+export function ChatList({ currentThreadId, onSelect }: Props) {
+  const threads = useQuery(api.chat.public.listThreads);
 
   if (threads === undefined) {
     return (
@@ -32,7 +21,7 @@ export function ChatList({
   if (threads.length === 0) {
     return (
       <p className="px-3 py-6 text-xs text-faint text-center">
-        {emptyText ?? "No conversations yet."}
+        No conversations yet.
       </p>
     );
   }

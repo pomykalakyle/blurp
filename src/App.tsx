@@ -5,7 +5,6 @@ import { AppShell, Section } from "./components/AppShell";
 import { GoalsScreen } from "./screens/GoalsScreen";
 import { ChatScreen } from "./screens/ChatScreen";
 import { NarrativeScreen } from "./screens/NarrativeScreen";
-import { CheckInScreen } from "./screens/CheckInScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { AgentActivationsScreen } from "./screens/AgentActivationsScreen";
 import { api } from "../convex/_generated/api";
@@ -15,19 +14,19 @@ import { api } from "../convex/_generated/api";
 // lands on the right screen. Returns null when no relevant param is set.
 function readInitialDeepLink(): {
   section: Section;
-  checkInThreadId: string | null;
+  threadId: string | null;
 } | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
   const checkIn = params.get("check-in");
   const goal = params.get("goal");
   if (checkIn) {
-    return { section: "checkIn", checkInThreadId: checkIn };
+    return { section: "chat", threadId: checkIn };
   }
   if (goal) {
     // v1: just open the goals screen. Scrolled-to-and-focused is a
     // stretch goal per the functional spec §7.
-    return { section: "goals", checkInThreadId: null };
+    return { section: "goals", threadId: null };
   }
   return null;
 }
@@ -38,10 +37,9 @@ export default function App() {
     deepLink?.section ?? "goals",
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
-  const [currentCheckInThreadId, setCurrentCheckInThreadId] = useState<
-    string | null
-  >(deepLink?.checkInThreadId ?? null);
+  const [currentThreadId, setCurrentThreadId] = useState<string | null>(
+    deepLink?.threadId ?? null,
+  );
 
   // Clear the deep-link params so a refresh doesn't keep re-firing them.
   useEffect(() => {
@@ -59,14 +57,9 @@ export default function App() {
     setCurrentThreadId(threadId);
   };
 
-  const goToCheckIn = (threadId: string | null) => {
-    setActiveSection("checkIn");
-    setCurrentCheckInThreadId(threadId);
-  };
-
   const handleNewCheckIn = async () => {
     const id = await createCheckInThread({});
-    goToCheckIn(id);
+    goToChat(id);
   };
 
   return (
@@ -78,11 +71,8 @@ export default function App() {
         drawerOpen={drawerOpen}
         onSetDrawerOpen={setDrawerOpen}
         currentThreadId={currentThreadId}
-        currentCheckInThreadId={currentCheckInThreadId}
         onSelectThread={(id) => goToChat(id)}
-        onSelectCheckInThread={(id) => goToCheckIn(id)}
         onNewChat={() => goToChat(null)}
-        onNewCheckIn={handleNewCheckIn}
       >
         {activeSection === "goals" && (
           <GoalsScreen onNewChat={() => goToChat(null)} />
@@ -91,16 +81,11 @@ export default function App() {
           <ChatScreen
             threadId={currentThreadId}
             onThreadCreated={(id) => setCurrentThreadId(id)}
+            onNewCheckIn={handleNewCheckIn}
           />
         )}
         {activeSection === "narrative" && <NarrativeScreen />}
         {activeSection === "agentActivations" && <AgentActivationsScreen />}
-        {activeSection === "checkIn" && (
-          <CheckInScreen
-            threadId={currentCheckInThreadId}
-            onNewCheckIn={handleNewCheckIn}
-          />
-        )}
         {activeSection === "settings" && <SettingsScreen />}
       </AppShell>
     </div>
