@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import { ToolIndicator } from "./ToolIndicator";
 import { ProposalCard } from "./ProposalCard";
+import { ReasoningSummary } from "./ReasoningSummary";
 import { Doc } from "../../../convex/_generated/dataModel";
 
 type CardDoc = Doc<"proposalCards">;
@@ -67,6 +68,9 @@ export function Message({ message, cards }: Props) {
                 <ReactMarkdown>{text}</ReactMarkdown>
               </div>
             );
+          }
+          if (part.type === "reasoning") {
+            return <ReasoningSummary key={i} text={part.text ?? ""} />;
           }
           if (isToolPart(part.type)) {
             const toolName = toolNameFromPartType(part.type);

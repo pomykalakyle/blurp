@@ -5,6 +5,7 @@ import { Activity, Loader2, Timer, Wrench } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { FONT_DISPLAY } from "../ui";
+import { ReasoningSummary } from "./ReasoningSummary";
 
 type AgentActivation = Doc<"agentActivations">;
 type TraceMessage = Record<string, any>;
@@ -81,6 +82,15 @@ function partText(part: unknown): string | null {
   return null;
 }
 
+function reasoningText(part: unknown): string | null {
+  if (!part || typeof part !== "object") return null;
+  const typed = part as { type?: string; text?: string };
+  if (typed.type === "reasoning" && typeof typed.text === "string") {
+    return typed.text;
+  }
+  return null;
+}
+
 function hasRenderableContent(message: TraceMessage): boolean {
   const role = getRole(message);
   return getContentParts(message).some(
@@ -88,6 +98,7 @@ function hasRenderableContent(message: TraceMessage): boolean {
       isToolCallPart(part) ||
       isToolResultPart(part) ||
       role === "tool" ||
+      Boolean(reasoningText(part)?.trim()) ||
       Boolean(partText(part)?.trim()),
   );
 }
@@ -164,6 +175,8 @@ function TraceMessageView({
           />
         );
       }
+      const reasoning = reasoningText(part);
+      if (reasoning) return <ReasoningSummary key={key} text={reasoning} />;
       const text = partText(part);
       if (text) return <TextMessage key={key} role={role} text={text} />;
       return null;

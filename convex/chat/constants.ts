@@ -168,13 +168,11 @@ export const STATIC_AGENT_INSTRUCTIONS = buildUserSystemPrompt(
   DEFAULT_USER_SETTINGS,
 );
 
-// Chat model: GPT-5.4-mini via the Vercel AI Gateway. Reasoning effort
-// is passed per-call as providerOptions.openai.reasoningEffort =
-// "medium" — see convex/chat/public.ts. Mini reasons faster and
-// cheaper than the flagship at the same effort, and at medium gives
+// Chat model: GPT-5.4-mini via the Vercel AI Gateway. Medium reasoning gives
 // enough judgment for tool selection, dictation correction, and the
-// notification-scheduling decisions in this app. There's no
-// gpt-5.5-mini on the gateway yet — 5.4-mini is the newest mini.
+// notification-scheduling decisions in this app. Concise reasoning summaries
+// are requested so assistant turns can show a compact, collapsible trace.
+// There's no gpt-5.5-mini on the gateway yet — 5.4-mini is the newest mini.
 export const CHAT_MODEL = "openai/gpt-5.4-mini";
 
 // Title model: nano with minimal reasoning. Titles are 3-6 words, no
@@ -184,7 +182,10 @@ export const TITLE_MODEL = "openai/gpt-5-nano";
 // Provider options for the chat model. Keep here so both streamText
 // call sites stay in sync.
 export const CHAT_PROVIDER_OPTIONS = {
-  openai: { reasoningEffort: "medium" as const },
+  openai: {
+    reasoningEffort: "medium" as const,
+    reasoningSummary: "concise" as const,
+  },
 };
 
 // Provider options for the title model — skip reasoning entirely.
