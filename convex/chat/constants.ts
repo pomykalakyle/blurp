@@ -170,8 +170,8 @@ export const STATIC_AGENT_INSTRUCTIONS = buildUserSystemPrompt(
 
 // Chat model: GPT-5.4-mini via the Vercel AI Gateway. Medium reasoning gives
 // enough judgment for tool selection, dictation correction, and the
-// notification-scheduling decisions in this app. Concise reasoning summaries
-// are requested so assistant turns can show a compact, collapsible trace.
+// notification-scheduling decisions in this app. Detailed reasoning summaries
+// are requested so assistant turns can show a readable, collapsible trace.
 // There's no gpt-5.5-mini on the gateway yet — 5.4-mini is the newest mini.
 export const CHAT_MODEL = "openai/gpt-5.4-mini";
 
@@ -184,7 +184,7 @@ export const TITLE_MODEL = "openai/gpt-5-nano";
 export const CHAT_PROVIDER_OPTIONS = {
   openai: {
     reasoningEffort: "medium" as const,
-    reasoningSummary: "concise" as const,
+    reasoningSummary: "detailed" as const,
   },
 };
 
