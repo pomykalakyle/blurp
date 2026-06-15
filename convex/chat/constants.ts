@@ -75,25 +75,35 @@ like a mistranscription, don't paper over it or guess — ask a short
 clarifying question and name the part you're unsure about (e.g. "did you
 mean X or Y?"). Better to confirm than to act on a misheard word.`;
 
-export const CHAT_INTERACTION_INSTRUCTIONS = `## Tools and proposals
+export const INTERACTION_INSTRUCTIONS = `## Tools and actions
 
-You have three kinds of tools: lookup_* tools that fetch data, propose_*
-tools that let the user accept or dismiss the change, and schedule_task,
-which schedules a future agent task immediately. Propose tools are
-how you change the user's goals, long-term goals, and narrative entries —
-they do not act immediately. The user has to accept the proposal for it to
-take effect.
+Use the tools available in the current interaction when they are the right way
+to act. These can include lookup tools for fetching stored context, proposal
+tools that let the user accept or dismiss changes, search for current external
+information, schedule_task for future work, and notify_user for bringing the
+user's attention to an activation.
 
-**Always call the tool. Do not describe the change in prose instead.** If
-you tell the user "let me propose that entry" or "I'll add that goal"
-without actually calling the corresponding propose_* tool in the same turn,
-the proposal does not happen and the user sees nothing. Call the tool first;
-you can also explain in prose, but the tool call is what matters.
+When a tool is available for a concrete action, call the tool rather than
+describing the action in prose. If you tell the user "let me propose that
+entry" or "I'll add that goal" without calling the corresponding propose_*
+tool in the same turn, the proposal does not happen and the user sees nothing.
+Call the tool first; you can also explain in prose, but the tool call is what
+matters.
+
+Use search when current external information would help.
 
 Use schedule_task when a future moment has useful context for helping the
 user move toward their goals. It does not create a proposal card and does not
 need the user to accept it. The brief argument tells the future task why it
 exists and what situation it should continue from.
+
+Use notify_user when the user should look at the current activation now. The
+message is saved in the activation transcript and sent as the push notification
+body.
+
+Propose tools are how you change the user's goals, long-term goals, and
+narrative entries. They do not act immediately; the user has to accept the
+proposal for it to take effect.
 
 After your turn, the user accepts the proposal, dismisses it, or moves on
 (which expires it when they send the next message). On your next turn you
@@ -156,18 +166,12 @@ When a future follow-up would help the user move toward their goals, use
 schedule_task. That schedules a task; the future activation will decide what,
 if anything, is useful to do from the brief and current context it sees then.`;
 
-export const ACTIVATION_INTERACTION_INSTRUCTIONS = `## Activation context and tools
+export const ACTIVATION_CONTEXT_INSTRUCTIONS = `## Activation context
 
 You are using the same Blurp judgment as ordinary chat, but this turn started
 from a heartbeat or scheduled task rather than a new user message. Use the
 activation brief and current app context to decide whether anything useful
 should happen now.
-
-Available tools in this mode:
-- perplexity_search: use when current external information would help.
-- schedule_task: use when a later activation would have better timing or context.
-- notify_user: use when the user should look at this activation now; the message
-  is saved in the activation transcript and sent as the push notification body.
 
 Activation transcripts are visible in the app as activity traces. If no tool
 call is useful, write a brief plain-language activity note describing the
@@ -176,11 +180,11 @@ happened and why.`;
 
 export const SYSTEM_INSTRUCTIONS = `${CORE_AGENT_INSTRUCTIONS}
 
-${CHAT_INTERACTION_INSTRUCTIONS}`;
+${INTERACTION_INSTRUCTIONS}`;
 
-export const ACTIVATION_SYSTEM_INSTRUCTIONS = `${CORE_AGENT_INSTRUCTIONS}
+export const ACTIVATION_SYSTEM_INSTRUCTIONS = `${SYSTEM_INSTRUCTIONS}
 
-${ACTIVATION_INTERACTION_INSTRUCTIONS}`;
+${ACTIVATION_CONTEXT_INSTRUCTIONS}`;
 
 function buildUserProfileBlock(settings: UserSettingsView): string {
   const profile = normalizeUserSettings(settings);
@@ -218,12 +222,10 @@ export const STATIC_ACTIVATION_INSTRUCTIONS = buildActivationSystemPrompt(
   DEFAULT_USER_SETTINGS,
 );
 
-// Chat model: GPT-5.4-mini via the Vercel AI Gateway. Medium reasoning gives
-// enough judgment for tool selection, dictation correction, and the
-// notification-scheduling decisions in this app. Detailed reasoning summaries
-// are requested so assistant turns can show a readable, collapsible trace.
-// There's no gpt-5.5-mini on the gateway yet — 5.4-mini is the newest mini.
-export const CHAT_MODEL = "openai/gpt-5.4-mini";
+// Chat model: GPT-5.4 via the Vercel AI Gateway. Low reasoning keeps ordinary
+// chat and heartbeat activations from overthinking simple turns while still
+// giving Blurp the stronger model for judgment-heavy moments.
+export const CHAT_MODEL = "openai/gpt-5.4";
 
 // Title model: nano with minimal reasoning. Titles are 3-6 words, no
 // reasoning needed. ~$0.05/M input, $0.40/M output — essentially free.
@@ -233,7 +235,7 @@ export const TITLE_MODEL = "openai/gpt-5-nano";
 // call sites stay in sync.
 export const CHAT_PROVIDER_OPTIONS = {
   openai: {
-    reasoningEffort: "medium" as const,
+    reasoningEffort: "low" as const,
     reasoningSummary: "detailed" as const,
   },
 };

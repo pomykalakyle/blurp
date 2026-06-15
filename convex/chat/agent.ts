@@ -28,6 +28,11 @@ export const chatAgent: Agent = new Agent(components.agent, {
   // 10 steps gives plenty of headroom for chained tool calls in a turn.
   stopWhen: stepCountIs(10),
   tools: {
+    perplexity_search: gateway.tools.perplexitySearch({
+      maxResults: 5,
+      country: "US",
+      searchLanguageFilter: ["en"],
+    }),
     lookup_archived_ltgs: lookupArchivedLtgs,
     lookup_resolved_goals: lookupResolvedGoals,
     propose_create_goal: proposeCreateGoal,
