@@ -330,6 +330,31 @@ export const scheduleTask = internalMutation({
   },
 });
 
+export const scheduleManualHeartbeat = internalMutation({
+  args: {
+    scheduledAt: v.string(),
+    brief: v.optional(v.string()),
+  },
+  returns: v.object({
+    agentActivationId: v.id("agentActivations"),
+    scheduledAt: v.number(),
+    agentThreadId: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const scheduledAt = Date.parse(args.scheduledAt);
+    if (Number.isNaN(scheduledAt)) {
+      throw new Error(`Invalid heartbeat datetime: ${args.scheduledAt}`);
+    }
+
+    return await createScheduledActivation(ctx, {
+      kind: "heartbeat",
+      scheduledAt,
+      brief: args.brief ?? null,
+      sourceType: "heartbeat_planner",
+    });
+  },
+});
+
 export const planDailyHeartbeats = internalMutation({
   args: {},
   returns: v.object({
