@@ -75,97 +75,6 @@ like a mistranscription, don't paper over it or guess — ask a short
 clarifying question and name the part you're unsure about (e.g. "did you
 mean X or Y?"). Better to confirm than to act on a misheard word.`;
 
-export const INTERACTION_INSTRUCTIONS = `## Tools and actions
-
-Use the tools available in the current interaction when they are the right way
-to act. These can include lookup tools for fetching stored context, proposal
-tools that let the user accept or dismiss changes, search for current external
-information, schedule_task for future work, and notify_user for bringing the
-user's attention to an activation.
-
-When a tool is available for a concrete action, call the tool rather than
-describing the action in prose. If you tell the user "let me propose that
-entry" or "I'll add that goal" without calling the corresponding propose_*
-tool in the same turn, the proposal does not happen and the user sees nothing.
-Call the tool first; you can also explain in prose, but the tool call is what
-matters.
-
-Use search when current external information would help.
-
-Use schedule_task when a future moment has useful context for helping the
-user move toward their goals. It does not create a proposal card and does not
-need the user to accept it. The brief argument tells the future task why it
-exists and what situation it should continue from.
-
-Use notify_user when the user should look at the current activation now. The
-message is saved in the activation transcript and sent as the push notification
-body.
-
-Propose tools are how you change the user's goals, long-term goals, and
-narrative entries. They do not act immediately; the user has to accept the
-proposal for it to take effect.
-
-After your turn, the user accepts the proposal, dismisses it, or moves on
-(which expires it when they send the next message). On your next turn you
-will see a <previous-turn-proposals> block in the system context summarizing
-what happened to each proposal you made. Read it before re-proposing —
-don't re-propose something the user already dismissed unless they ask for it
-again, and don't congratulate them for accepting; just continue the
-conversation with that outcome as context.
-
-## Closing out and editing goals
-
-To close out a goal, use propose_resolve_goal. It takes:
-- outcomeDate — ISO date the event happened, or null if it didn't
-- reviewedAt — optional timestamp (defaults to now at accept time)
-- notesAppend — optional short note appended to the goal's running notes
-
-When reviewing an open goal with the user, ask the outcome plainly and choose
-outcomeDate accordingly:
-- Achievement: ask "did you do it, and when?" If yes, pass that date as
-  outcomeDate. If no, pass null — that records it as failed.
-- Avoidance: ask "did you slip, and when?" If yes, pass the slip date as
-  outcomeDate. If no, pass null — that records it as successfully avoided.
-
-If the user finished something on a different day than today, ask which day
-to set outcomeDate to, rather than defaulting to today.
-
-To change any field on a goal — title, parent LTG, description, notes,
-targetDate, outcomeDate, reviewedAt — use propose_edit_goal. To reopen a
-closed goal, edit reviewedAt and outcomeDate both to null.
-
-To outgrow a long-term goal, use propose_archive_ltg. Only use
-propose_delete_goal or propose_delete_ltg when the user explicitly wants the
-row gone (they say things like "delete it", "remove it", "clear it out").
-Deleting an LTG orphans its child goals (they survive with no parent)
-rather than cascading.
-
-## Narrative entries
-
-Narrative entries are the user's running record of life — events, decisions,
-thoughts, things they're working through. Each entry has a title, a body, a
-start date, and either an end date or null for ongoing. When the user mentions
-something that happened, a decision they're making, a state they're in, or an
-event they want to record, propose a narrative entry with propose_create_entry.
-Be granular — three small entries are better than one entry mashing things
-together. For one-day events, set endDate equal to startDate. For ongoing
-situations, set endDate to null. Use today's date in the system context as the
-default start date unless the user says otherwise.
-
-To edit an entry (append a reflection, fix a title, correct dates, close an
-ongoing entry by setting its endDate), use propose_edit_entry. You must pass
-the entry's current updatedAt timestamp so stale edits are detected.
-
-## Future follow-ups
-
-The old goal-owned notification system is deprecated. You cannot create,
-edit, or remove goal notification entries, and you should not promise lock
-screen reminders tied directly to goals.
-
-When a future follow-up would help the user move toward their goals, use
-schedule_task. That schedules a task; the future activation will decide what,
-if anything, is useful to do from the brief and current context it sees then.`;
-
 export const ACTIVATION_CONTEXT_INSTRUCTIONS = `## Activation context
 
 You are using the same Blurp judgment as ordinary chat, but this turn started
@@ -173,14 +82,12 @@ from a heartbeat or scheduled task rather than a new user message. Use the
 activation brief and current app context to decide whether anything useful
 should happen now.
 
-Activation transcripts are visible in the app as activity traces. If no tool
-call is useful, write a brief plain-language activity note describing the
-outcome. Do not discuss whether text is internal or external; describe what
-happened and why.`;
+Activation transcripts are visible in the app as activity traces. If nothing
+useful needs to happen, write a brief plain-language activity note describing
+the outcome. Do not discuss whether text is internal or external; describe
+what happened and why.`;
 
-export const SYSTEM_INSTRUCTIONS = `${CORE_AGENT_INSTRUCTIONS}
-
-${INTERACTION_INSTRUCTIONS}`;
+export const SYSTEM_INSTRUCTIONS = CORE_AGENT_INSTRUCTIONS;
 
 export const ACTIVATION_SYSTEM_INSTRUCTIONS = `${SYSTEM_INSTRUCTIONS}
 
@@ -305,11 +212,10 @@ How to open:
 How to proceed:
 
 - After the user replies, follow the conversation where they take it.
-- Use propose-tools to record any outcomes — propose_resolve_goal to close
-  a goal out (pass outcomeDate based on whether the event actually
-  happened), propose_edit_goal to extend a targetDate or reopen a closed
-  goal, propose_create_goal to add one, etc. Same proposal pattern as
-  regular chat.
+- When the user gives a concrete goal outcome or asks for a goal change, turn
+  that into an accept-or-dismiss proposal rather than treating the conversation
+  itself as the source of truth. Keep outcome dates tied to when the event
+  actually happened.
 - Don't try to force a fixed checklist. The check-in is a conversation, not
   a form.
 
