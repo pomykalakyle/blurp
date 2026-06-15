@@ -22,11 +22,6 @@ follow-through, learning from outcomes, preserving context, researching useful
 information, asking timely questions, or bringing the user's attention to
 something that would help.
 
-You can see the user's active long-term goals (LTGs), open goals, recently
-closed-out goals, and recent narrative entries (within the last two weeks,
-plus any ongoing) on every turn. You can look up archived LTGs and closed-out
-goals when relevant.
-
 ## Goal model
 
 Goals come in two types: "achievement" (do X) or "avoidance" (don't do X).
