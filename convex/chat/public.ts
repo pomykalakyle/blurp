@@ -29,7 +29,6 @@ import {
   buildUserSystemPrompt,
 } from "./constants";
 import { localDate, localDateTime } from "./dates";
-import { SINGLE_USER_AGENT_USER_ID } from "../userSettingsModel";
 import type { Doc } from "../_generated/dataModel";
 import type { UserSettingsView } from "../userSettingsModel";
 
@@ -182,15 +181,11 @@ ${lines.join("\n")}
 </previous-turn-proposals>`;
 }
 
-const AGENT_USER_ID = SINGLE_USER_AGENT_USER_ID;
-
 export const createThread = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
-    return await agentCreateThread(ctx, components.agent, {
-      userId: AGENT_USER_ID,
-    });
+    return await agentCreateThread(ctx, components.agent);
   },
 });
 
@@ -198,9 +193,7 @@ export const createCheckInThread = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
-    const threadId = await agentCreateThread(ctx, components.agent, {
-      userId: AGENT_USER_ID,
-    });
+    const threadId = await agentCreateThread(ctx, components.agent);
     const settings = await ctx.runQuery(internal.userSettings.getInternal, {});
     await ctx.db.insert("chatThreadMeta", {
       threadId,
@@ -225,9 +218,7 @@ export const createScopedCheckInThread = internalMutation({
   args: { scopeGoalIds: v.array(v.id("goals")) },
   returns: v.string(),
   handler: async (ctx, args) => {
-    const threadId = await agentCreateThread(ctx, components.agent, {
-      userId: AGENT_USER_ID,
-    });
+    const threadId = await agentCreateThread(ctx, components.agent);
     const settings = await ctx.runQuery(internal.userSettings.getInternal, {});
     await ctx.db.insert("chatThreadMeta", {
       threadId,
@@ -247,7 +238,7 @@ export const listThreads = query({
   handler: async (ctx) => {
     const result = await ctx.runQuery(
       components.agent.threads.listThreadsByUserId,
-      { userId: AGENT_USER_ID, order: "desc" },
+      { order: "desc" },
     );
     return result.page;
   },
@@ -265,7 +256,6 @@ export const listSidebarItems = query({
     const threads = await ctx.runQuery(
       components.agent.threads.listThreadsByUserId,
       {
-        userId: AGENT_USER_ID,
         order: "desc",
         paginationOpts: { cursor: null, numItems: 100 },
       },
@@ -287,26 +277,38 @@ export const listSidebarItems = query({
         .take(100),
     ]);
 
-    const chatItems = (threads.page as AgentThreadSummary[]).map((thread) => ({
-      type: "chat" as const,
-      id: thread._id,
-      threadId: thread._id,
-      title: thread.title ?? null,
-      sortTime: thread._creationTime,
-    }));
+    const activations = [...runningActivations, ...completedActivations];
+    const activationByThreadId = new Map(
+      activations.map((activation) => [activation.agentThreadId, activation]),
+    );
+    const threadIds = new Set(
+      (threads.page as AgentThreadSummary[]).map((thread) => thread._id),
+    );
+    const chatItems = (threads.page as AgentThreadSummary[]).map((thread) => {
+      const activation = activationByThreadId.get(thread._id);
+      return {
+        type: "chat" as const,
+        id: thread._id,
+        threadId: thread._id,
+        title: thread.title ?? null,
+        sortTime: activation?.scheduledAt ?? thread._creationTime,
+      };
+    });
     const activationItems = [
       ...runningActivations,
       ...completedActivations,
-    ].map((activation) => ({
-      type: "activation" as const,
-      id: activation._id,
-      activationId: activation._id,
-      kind: activation.kind,
-      status: activation.status,
-      scheduledAt: activation.scheduledAt,
-      brief: activation.brief,
-      sortTime: activation.scheduledAt,
-    }));
+    ]
+      .filter((activation) => !threadIds.has(activation.agentThreadId))
+      .map((activation) => ({
+        type: "activation" as const,
+        id: activation._id,
+        activationId: activation._id,
+        kind: activation.kind,
+        status: activation.status,
+        scheduledAt: activation.scheduledAt,
+        brief: activation.brief,
+        sortTime: activation.scheduledAt,
+      }));
 
     return [...chatItems, ...activationItems]
       .sort((a, b) => b.sortTime - a.sortTime)
@@ -638,7 +640,6 @@ export const backfillMissingTitles = internalAction({
     const result = await ctx.runQuery(
       components.agent.threads.listThreadsByUserId,
       {
-        userId: AGENT_USER_ID,
         order: "desc",
         paginationOpts: { cursor: null, numItems: 500 },
       },
