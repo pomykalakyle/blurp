@@ -1,5 +1,4 @@
 export const USER_SETTINGS_KEY = "default";
-export const SINGLE_USER_AGENT_USER_ID = "default-user";
 
 export type UserSettingsView = {
   displayName: string;
